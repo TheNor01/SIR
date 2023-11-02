@@ -162,3 +162,5 @@ cython_debug/
 
 *.png
 *.json
+*.jpg
+logs/metrics/*
