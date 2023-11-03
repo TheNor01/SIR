@@ -1,0 +1,39 @@
+Dataset: https://www.cityscapes-dataset.com/examples/
+
+{root}/{type}{video}/{split}/{city}/{city}_{seq:0>6}_{frame:0>6}_{type}{ext}
+
+
+The meaning of the individual elements is:
+
+root the root folder of the Cityscapes dataset. Many of our scripts check if an environment variable CITYSCAPES_DATASET pointing to this folder exists and use this as the default choice.
+type the type/modality of data, e.g. gtFine for fine ground truth, or leftImg8bit for left 8-bit images.
+split the split, i.e. train/val/test/train_extra/demoVideo. Note that not all kinds of data exist for all splits. Thus, do not be surprised to occasionally find empty folders.
+city the city in which this part of the dataset was recorded.
+seq the sequence number using 6 digits.
+frame the frame number using 6 digits. Note that in some cities very few, albeit very long sequences were recorded, while in some cities many short sequences were recorded, of which only the 19th frame is annotated.
+ext the extension of the file and optionally a suffix, e.g. _polygons.json for ground truth files
+
+gtFine the fine annotations, 2975 training, 500 validation, and 1525 testing. This type of annotations is used for validation, testing, and optionally for training. Annotations are encoded using json files containing the individual polygons. Additionally, we provide png images, where pixel values encode labels. 
+
+Please refer to helpers/labels.py and the scripts in preparation for details.
+
+
+
+ImagePairs
+
+fatte da immagine e a destra la maschera
+
+
+PSPNET
+https://arxiv.org/pdf/1612.01105v2.pdf
+
+
+UNET
+https://arxiv.org/pdf/1505.04597.pdf
+
+
+    https://github.com/adliaulia/Cityscape-image-segmentation/blob/main/Cityscape-semantic-segmentation_Adli-Aulia.ipynb
+
+DEEPLAB
+
+https://arxiv.org/pdf/1606.00915v2.pdf
