@@ -29,6 +29,18 @@ IMAGE_SIZE = [128, 128]
 IMAGE_SHAPE = IMAGE_SIZE + [3,]
 
 
+
+#to do:
+
+"""
+
+1) normalization
+2) adam
+
+3) standard deeplab + ppsnet
+
+"""
+
 if __name__ == '__main__':
 
     choosedModel = 0
@@ -87,7 +99,7 @@ if __name__ == '__main__':
         model = UNet(3).float().to("cpu")
         modelString= "unet"
     elif(choosedModel==1):
-        model = DeepLab50(len(id2label))
+        model = DeepLab50(len(id2label)) #to fix
         modelString= "deeplab"
 
     print("MODEL HAS BEEN CREATED...\n")
