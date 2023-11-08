@@ -3,7 +3,6 @@ import torch.nn.functional as F
 import torch
 
 import torchvision.transforms as transform
-# [(W−K+2P)/S]+1.
 
 class Convblock(nn.Module):
     
