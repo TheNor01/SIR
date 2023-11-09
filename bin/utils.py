@@ -15,6 +15,8 @@ def preprocess(path,maps):
     img2 = np.array(img2)
 
 
+    #encode_segmap try it
+
     mask = np.zeros(shape=(img2.shape[0], img2.shape[1]), dtype = np.uint32) #mask
 
 

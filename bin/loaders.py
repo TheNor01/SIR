@@ -7,11 +7,10 @@ from matplotlib import pyplot as plt
 
 class ImagesDataset(Dataset):
     
-    def __init__(self, images_path ,transform_img=None ,transform_label=None):
-        
+    def __init__(self, images_path,transform=None):
+    
         self.images_path = images_path
-        self.transform_img = transform_img
-        self.transform_label = transform_label
+        self.transform = transform
 
     def __len__(self):
         return len(self.images_path)
@@ -20,13 +19,17 @@ class ImagesDataset(Dataset):
         
         img = plt.imread(self.images_path[idx])
         image,label = img[:,:int(img.shape[1]/2)],img[:,int(img.shape[1]/2):]
-    
-        if self.transform_img:
-            image = self.transform_img(image)
+
+        #im = Image.fromarray(image.astype('uint8'), 'RGB')
+        #lb = Image.fromarray(label.astype('uint8'), 'RGB')
+
+        #test = Image.open(self.images_path[idx])
+        
+        imageTransformed = self.transform(image)
+        labelTransformed = self.transform(label)
+        #labelTransformed = self.transform(label)
             
-        if self.transform_label:
-            label = self.transform_label(label)
             
-        return image, label
+        return {'image' : imageTransformed, 'label':labelTransformed}
 
 

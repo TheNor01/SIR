@@ -17,7 +17,7 @@ import time
 from torch.utils.tensorboard import SummaryWriter
 from torchvision.utils import make_grid
 from bin.utils import prepare_tensor_dataset,preprocess
-from labels import id2label
+from config import labels
 import calendar
 
 from bin.models.UNET import UNet
@@ -44,53 +44,118 @@ IMAGE_SHAPE = IMAGE_SIZE + [3,]
 if __name__ == '__main__':
 
     choosedModel = 0
+    customSize = 128
+    labels.init()
     #https://www.kaggle.com/code/sudhupandey/cityscape-segmentation-unet-pytorch#kln-108
 
 
     train_path = glob("dataset/cityscapes_data/cityscapes_data/train_small/*")
     valid_path = glob("dataset/cityscapes_data/cityscapes_data/val_small/*")
 
-    fig,ax = plt.subplots(5,2,figsize=(10,30))
+
     for i in range(1):
         img = plt.imread(train_path[i])
         #ax[i][0].imshow(img[:,:256])
         #ax[i][1].imshow(img[:,256:])
 
+        image,label = img[:,:int(img.shape[1]/2)],img[:,int(img.shape[1]/2):]
+
+        transformTest = transform.Compose([
+            transform.ToPILImage(),
+            transform.Resize((512,640)),
+            transform.ToTensor()
+        ])
+
+        im = transformTest(image)
+        lb = transformTest(label)
+        print(im)
+
+        print(type(label))
+        print(label)
+
         #plt.show()
 
-    mytransformsImage = transform.Compose(
-        [
-            transform.ToTensor(),
-            #transform.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
-            transform.RandomHorizontalFlip(p=0.9)
-        ]
-    )
-
-    mytransformsLabel = transform.Compose(
-        [
-            transform.ToTensor(),
-        ]
-    )
 
 
-    traindata = ImagesDataset(train_path, mytransformsImage, mytransformsLabel)
+
+    #======================
+
+    transformPreprocess = transform.Compose([
+            transform.ToPILImage(),
+            transform.Resize((customSize,customSize)),
+            transform.ToTensor()
+        ])
+
+
+    traindataset = ImagesDataset(train_path, transformTest)
+    
     # val dataset
-    valdata = ImagesDataset(valid_path, mytransformsImage, mytransformsLabel)
+    valdata = ImagesDataset(valid_path, transformTest)
 
-    sample = traindata[0]
+    #Normalization step ====
+
+    """
+    Per poter allenare un classificatore su questi dati, abbiamo bisogno di normalizzarli in modo che essi abbiano media nulla e deviazione standard unitaria. Calcoliamo media e varianza dei
+    pixel contenuti in tutte le immagini del training set:
+    """
+
+    m = np.zeros(3)
+    print(m)
+    for sample in traindataset:
+        print(type(sample))
+        m+=sample['image'].sum(1).sum(1).numpy() 
+
+    m=m/(len(traindataset)*customSize*customSize)
+    
+    s = np.zeros(3)
+    for sample in traindataset:
+        s+=((sample['image']-torch.Tensor(m).view(3,1,1))**2).sum(1).sum(1).numpy()
+    
+    s=np.sqrt(s/(len(traindataset)*customSize*customSize))
+
+
+    print("Medie",m)
+
+    print(type(m))
+    print("Dev.Std.",s)
+
+    #============================
+
+
+    sample = traindataset[0]
     #print(sample)
+
+    normalizedTransform  = transform.Compose([
+            transform.ToPILImage(),
+            transform.Resize((customSize,customSize)),
+            transform.ToTensor(),
+            transform.Normalize(m,s),
+        ])
+    
+    testTransform  = transform.Compose([
+            transform.ToPILImage(),
+            transform.Resize((customSize,customSize)),
+            transform.ToTensor(),
+        ])
+    
+    
+    normalizedTraindataset = ImagesDataset(train_path, normalizedTransform)
+
+    testDataset = ImagesDataset(valid_path, testTransform)
+
+    print(normalizedTraindataset[0]['image'].shape)
+    print(normalizedTraindataset[0]['label'])
+
+
+    print(testDataset[0]['label'].shape)
+    print(testDataset[0]['label'])
+
+
 
 
     batch_size = 4
-    train_loader = DataLoader(traindata,batch_size)
-    vaild_loader = DataLoader(valdata,1)
-
-    X_train, Y_train, X_valid, Y_valid = prepare_tensor_dataset("dataset/cityscapes_data/cityscapes_data/train_small", "dataset/cityscapes_data/cityscapes_data/val_small",id2label)
-
-    X_train = np.array(X_train)
-    Y_train = np.array(Y_train)
-    X_valid = np.array(X_valid)
-    Y_valid = np.array(Y_valid)
+    train_loader = DataLoader(normalizedTraindataset,batch_size)
+    vaild_loader = DataLoader(testDataset,1)
 
 
     model = None
@@ -99,7 +164,7 @@ if __name__ == '__main__':
         model = UNet(3).float().to("cpu")
         modelString= "unet"
     elif(choosedModel==1):
-        model = DeepLab50(len(id2label)) #to fix
+        model = DeepLab50(len(labels.id2label)) #to fix
         modelString= "deeplab"
 
     print("MODEL HAS BEEN CREATED...\n")

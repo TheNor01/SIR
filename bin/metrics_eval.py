@@ -52,16 +52,13 @@ def train_classifier(model, train_loader, test_loader, exp_name='experiment',lr=
             loss_meter.reset(); acc_meter.reset()
             model.train() if mode == 'train' else model.eval()
             with torch.set_grad_enabled(mode=='train'): #abilitiamo i gradienti solo in training
-                for img,label  in (loader[mode]):
+                for batch in (loader[mode]):
 
-                    x=img #"portiamoli sul device corretto"
-                    y=label
-
+                    x=batch['image'].to(device) #"portiamoli sul device corretto"
+                    y=batch['label'].to(device)
 
                     print(type(x))
                     print(type(y))
-
-
 
                     output = model(x)
 
