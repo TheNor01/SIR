@@ -9,6 +9,9 @@ from bin.utils import show
 from torchmetrics.classification import MulticlassJaccardIndex
 from sklearn.metrics import jaccard_score as jsc
 import sklearn.metrics as skm
+import torch.nn.functional as F
+
+from tqdm import tqdm
 
 class AverageValueMeter():
     def __init__(self):
@@ -28,6 +31,22 @@ class AverageValueMeter():
         except:
             return None
 
+"""
+def cross_entropy2d(input, target, weight=None, size_average=True):
+    n, c, h, w = input.size()
+    nt, ht, wt = target.size()
+
+    # Handle inconsistent size between input and target
+    if h != ht and w != wt:  # upsample labels
+        input = F.interpolate(input, size=(ht, wt), mode="bilinear", align_corners=True)
+
+    input = input.transpose(1, 2).transpose(2, 3).contiguous().view(-1, c)
+    target = target.view(-1)
+    loss = F.cross_entropy(
+        input, target, weight=weight, size_average=size_average, ignore_index=250
+    )
+    return loss
+"""
 
 def train_classifier(model, train_loader, test_loader, exp_name='experiment',lr=0.001, epochs=100, momentum=0.9):
     criterion = nn.CrossEntropyLoss() 
@@ -52,8 +71,9 @@ def train_classifier(model, train_loader, test_loader, exp_name='experiment',lr=
         for mode in ['train','test']:
             loss_meter.reset(); acc_meter.reset()
             model.train() if mode == 'train' else model.eval()
+            running_loss = 0.0
             with torch.set_grad_enabled(mode=='train'): #abilitiamo i gradienti solo in training
-                for batch in (loader[mode]):
+                for i,batch in tqdm(enumerate(loader[mode],0)):
 
                     x=batch['image'].to(device)
                     y=batch['label'].to(device)
@@ -61,27 +81,38 @@ def train_classifier(model, train_loader, test_loader, exp_name='experiment',lr=
                     #print(type(x))
                     #print(type(y))
 
+                    #pred = batch['image'].data.max(1)[1].cpu().numpy()
+                    #gt = batch['label'].data.cpu().numpy()
+
                     output = model(x)
 
-                    #print(type(output))
-                    #print(output)
-                    
-                    #if(e%5==0):
-                    # show(img,output,label)
+
 
                     #aggiorniamo il global_step
                     #conterrà il numero di campioni visti durante il training
                     n = x.shape[0] #numero di elementi nel batch
                     global_step += n
 
-                    l = criterion(output,y)
+                    masks = torch.argmax(y, dim=1)
+
+                    l = criterion(output,masks)
+                    #l = cross_entropy2d(output,y)
                     if mode=='train':
                         l.backward()
+
+
                     optimizer.step()
                     optimizer.zero_grad()
 
                     #acc = accuracy_score(y.data.to('cpu'),output.data.to('cpu').max(1)[1])
                     loss_meter.add(l.item(),n)
+
+                    running_loss += l.item()
+                    if i % 100 == 0:
+                            print('[%d, %5d] loss: %.3f' %
+                            (e + 1, i + 1, running_loss / 2000))
+                            running_loss = 0.0
+
                     #acc_meter.add(acc,n)
                     #loggiamo i risultati iterazione per iterazione solo durante il training
 
@@ -111,14 +142,16 @@ def test_classifier(model, loader):
     device = "cpu"
     model.to(device)
 
-    #model.eval()
-
+    #eval mode?
+    model.eval()
     predictions, labels = [], []
     for batch in loader:
 
         #[batch_size, channels, height, width].
         x = batch["image"].to(device)
         y = batch["label"].to(device)
+
+        print(y)
 
         output = model(x)
 
@@ -131,13 +164,15 @@ def test_classifier(model, loader):
         #gt = y.data.cpu()
         
 
-        lbl = y.cpu().detach().numpy().reshape(-1)
-        target = output.cpu().detach().numpy().reshape(-1)       
+        pred = output.data.max(1)[1].cpu().numpy()
+        gt = y.data.cpu().numpy()
 
-        print(lbl)
-        print(target)
+        print(pred.shape)
+        print(gt.shape)
 
-        print(jsc(target,lbl))
+    
+        #print(jsc(pred,gt))
+        print(jsc(pred.flatten(),gt.flatten()))
 
         exit()
 

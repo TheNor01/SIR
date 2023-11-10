@@ -15,18 +15,14 @@ from torch.utils.data import DataLoader
 from bin.loaders import ImagesDataset
 import time
 from torch.utils.tensorboard import SummaryWriter
-from torchvision.utils import make_grid
 from config import labels
 import calendar
 
 from bin.models.UNET import UNet
 from bin.models.DEEPLAB import DeepLab50
-import segmentation_models_pytorch as smp
+from bin.models.RESNET import R2U_Net
+#import segmentation_models_pytorch as smp
 from bin.metrics_eval import train_classifier,test_classifier
-
-
-IMAGE_SIZE = [128, 128]
-IMAGE_SHAPE = IMAGE_SIZE + [3,]
 
 
 
@@ -44,7 +40,7 @@ IMAGE_SHAPE = IMAGE_SIZE + [3,]
 if __name__ == '__main__':
 
     choosedModel = 0
-    customSize = 128
+    customSize = 64 #for unet at least 128
     labels.init()
     #https://www.kaggle.com/code/sudhupandey/cityscape-segmentation-unet-pytorch#kln-108
 
@@ -87,17 +83,44 @@ if __name__ == '__main__':
         ])
 
 
-    traindataset = ImagesDataset(train_path, transformTest)
+    colors = labels.id2labelValid
+    voidLabels = labels.voidLabels
+    nameLabels = labels.namelabelValid
+    validLabels = list(colors.keys())
+    ignore_index = 250
+
+
+    #we have to define a undefined label? as void?
+
+
+    print("RGB colors: "+ str(len(colors)))
+    print(validLabels)
+    print(nameLabels)
+    print("void colors: "+ str(len(voidLabels)))
+    print(voidLabels)
+
+    rgbColors = len(colors)
+    print(rgbColors)
+
+
+
+    traindataset = ImagesDataset(train_path, validLabels,voidLabels,ignore_index,rgbColors,transformPreprocess)
+    print(traindataset[0]['image'].shape)
+    print(traindataset[0]['label'].shape)
+
+    print(traindataset[0]['label'])
+
+
     
     # val dataset
-    valdata = ImagesDataset(valid_path, transformTest)
+    valdataset = ImagesDataset(valid_path, validLabels,voidLabels,ignore_index,rgbColors,transformPreprocess)
 
     #Normalization step ====
 
+    #Nan value...
     """
     Per poter allenare un classificatore su questi dati, abbiamo bisogno di normalizzarli in modo che essi abbiano media nulla e deviazione standard unitaria. Calcoliamo media e varianza dei
     pixel contenuti in tutte le immagini del training set:
-    """
 
     m = np.zeros(3)
     print(m)
@@ -119,17 +142,20 @@ if __name__ == '__main__':
     print(type(m))
     print("Dev.Std.",s)
 
+    """
+    
     #============================
 
 
     sample = traindataset[0]
     #print(sample)
 
+    """
     normalizedTransform  = transform.Compose([
             transform.ToPILImage(),
             transform.Resize((customSize,customSize)),
             transform.ToTensor(),
-            transform.Normalize(m,s),
+            #transform.Normalize(m,s),
         ])
     
     testTransform  = transform.Compose([
@@ -138,48 +164,52 @@ if __name__ == '__main__':
             transform.ToTensor(),
         ])
     
-    
-    normalizedTraindataset = ImagesDataset(train_path, normalizedTransform)
+    """
 
-    testDataset = ImagesDataset(valid_path, testTransform)
+    #normalizedTraindataset = ImagesDataset(train_path, normalizedTransform)
 
+    #testDataset = ImagesDataset(valid_path, testTransform)
+
+    """
     print(normalizedTraindataset[0]['image'].shape)
     print(normalizedTraindataset[0]['label'].shape)
 
     print(testDataset[0]['image'].shape)
     print(testDataset[0]['label'].shape)
+    """
 
 
 
-
-    batch_size = 3
-    train_loader = DataLoader(normalizedTraindataset,batch_size)
-    vaild_loader = DataLoader(testDataset,1)
+    
 
 
-
-    print("CLASSES")
-    print(len(labels.id2label))
-
-    #29 distinct colors
-    numClasses = len(set(tuple(x) for x in labels.id2label.values()))
-    #tune classes
 
     model = None
     modelString = ""
     if(choosedModel==0):
-        model = UNet(3,numClasses).float().to("cpu")
+        #model = UNet(3,rgbColors).float().to("cpu")
+        model = R2U_Net().to("cpu")
         modelString= "unet"
     elif(choosedModel==1):
-        #model = DeepLab50(len(labels.id2label)) #to fix
-        model = smp.DeepLabV3(classes=numClasses)
+        model = DeepLab50(len(labels.id2label)) #to fix
+        #model = smp.DeepLabV3(classes=numClasses)
         modelString= "deeplab"
 
     print("MODEL HAS BEEN CREATED...\n")
 
-    EPOCHS = 40
-    BATCH_SIZE = 16
-    LR = 0.1
+    EPOCHS = 4
+    BATCH_SIZE = 15
+    LR = 0.01
+
+    """
+    learning_rate = 1e-6
+    train_epochs = 8
+    n_classes = 19
+    batch_size = 1
+    num_workers = 1
+    learning_rate = 1e-6
+    """
+
     #https://www.kaggle.com/code/sudhupandey/cityscape-segmentation-unet-pytorch
 
     current_GMT = time.gmtime()
@@ -187,13 +217,26 @@ if __name__ == '__main__':
     print("Current timestamp:", ts)
 
     #use ignore index
-    trained = train_classifier(model, train_loader,vaild_loader, exp_name=str(ts)+"_color", epochs = EPOCHS,lr=LR,momentum=0.5)
 
-    torch.save(model.state_dict(), "./checkpoint_model/"+modelString+".pth")
+    train_loader = DataLoader(traindataset,BATCH_SIZE,num_workers=4)
+    vaild_loader = DataLoader(valdataset,num_workers=4)
 
-    accuracy_score, iou_score = test_classifier(trained,train_loader) #first on train
 
-    print(accuracy_score,iou_score)
+    doTrain = 0
+
+    trained=None
+    if(doTrain):
+        trained = train_classifier(model, train_loader,vaild_loader, exp_name=str(ts)+"_color", epochs = EPOCHS,lr=LR,momentum=0.5)
+        torch.save(model.state_dict(), "./checkpoint_model/"+modelString+".pth")
+    else:
+        model.load_state_dict(torch.load("./checkpoint_model/"+modelString+".pth"))
+        trained = model
+
+    print("TRAINING COMPLETED")
+
+    #accuracy_score, iou_score = test_classifier(trained,train_loader) #first on train
+
+    #print(accuracy_score,iou_score)
 
     accuracy_score, iou_score = test_classifier(trained,vaild_loader)
 
