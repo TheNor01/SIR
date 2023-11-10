@@ -37,3 +37,9 @@ https://arxiv.org/pdf/1505.04597.pdf
 DEEPLAB
 
 https://arxiv.org/pdf/1606.00915v2.pdf
+
+
+
+Notes:
+https://www.jeremyjordan.me/semantic-segmentation/
+https://pytorch.org/vision/main/generated/torchvision.utils.draw_segmentation_masks.html

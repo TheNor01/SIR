@@ -5,6 +5,7 @@ from PIL import Image
 from torchvision import transforms
 from matplotlib import pyplot as plt
 
+
 class ImagesDataset(Dataset):
     
     def __init__(self, images_path,transform=None):
@@ -27,6 +28,9 @@ class ImagesDataset(Dataset):
         
         imageTransformed = self.transform(image)
         labelTransformed = self.transform(label)
+
+
+
         #labelTransformed = self.transform(label)
             
             

@@ -25,7 +25,7 @@ class Convblock(nn.Module):
 # Encoder -> BottelNeck => Decoder
 class UNet(nn.Module):
     
-    def __init__(self,input_channel,retain=True):
+    def __init__(self,input_channel,classes,retain=True):
 
         super().__init__()
 

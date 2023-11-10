@@ -16,12 +16,12 @@ from bin.loaders import ImagesDataset
 import time
 from torch.utils.tensorboard import SummaryWriter
 from torchvision.utils import make_grid
-from bin.utils import prepare_tensor_dataset,preprocess
 from config import labels
 import calendar
 
 from bin.models.UNET import UNet
 from bin.models.DEEPLAB import DeepLab50
+import segmentation_models_pytorch as smp
 from bin.metrics_eval import train_classifier,test_classifier
 
 
@@ -144,27 +144,35 @@ if __name__ == '__main__':
     testDataset = ImagesDataset(valid_path, testTransform)
 
     print(normalizedTraindataset[0]['image'].shape)
-    print(normalizedTraindataset[0]['label'])
+    print(normalizedTraindataset[0]['label'].shape)
 
-
+    print(testDataset[0]['image'].shape)
     print(testDataset[0]['label'].shape)
-    print(testDataset[0]['label'])
 
 
 
 
-    batch_size = 4
+    batch_size = 3
     train_loader = DataLoader(normalizedTraindataset,batch_size)
     vaild_loader = DataLoader(testDataset,1)
 
 
+
+    print("CLASSES")
+    print(len(labels.id2label))
+
+    #29 distinct colors
+    numClasses = len(set(tuple(x) for x in labels.id2label.values()))
+    #tune classes
+
     model = None
     modelString = ""
     if(choosedModel==0):
-        model = UNet(3).float().to("cpu")
+        model = UNet(3,numClasses).float().to("cpu")
         modelString= "unet"
     elif(choosedModel==1):
-        model = DeepLab50(len(labels.id2label)) #to fix
+        #model = DeepLab50(len(labels.id2label)) #to fix
+        model = smp.DeepLabV3(classes=numClasses)
         modelString= "deeplab"
 
     print("MODEL HAS BEEN CREATED...\n")
@@ -178,9 +186,8 @@ if __name__ == '__main__':
     ts = calendar.timegm(current_GMT)
     print("Current timestamp:", ts)
 
+    #use ignore index
     trained = train_classifier(model, train_loader,vaild_loader, exp_name=str(ts)+"_color", epochs = EPOCHS,lr=LR,momentum=0.5)
-
-    exit()
 
     torch.save(model.state_dict(), "./checkpoint_model/"+modelString+".pth")
 

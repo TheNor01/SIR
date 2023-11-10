@@ -6,7 +6,8 @@ from torch import nn
 import torch
 import numpy as np
 from bin.utils import show
-
+from torchmetrics.classification import MulticlassJaccardIndex
+from sklearn.metrics import jaccard_score as jsc
 import sklearn.metrics as skm
 
 class AverageValueMeter():
@@ -54,16 +55,16 @@ def train_classifier(model, train_loader, test_loader, exp_name='experiment',lr=
             with torch.set_grad_enabled(mode=='train'): #abilitiamo i gradienti solo in training
                 for batch in (loader[mode]):
 
-                    x=batch['image'].to(device) #"portiamoli sul device corretto"
+                    x=batch['image'].to(device)
                     y=batch['label'].to(device)
 
-                    print(type(x))
-                    print(type(y))
+                    #print(type(x))
+                    #print(type(y))
 
                     output = model(x)
 
-                    print(type(output))
-                    print(output)
+                    #print(type(output))
+                    #print(output)
                     
                     #if(e%5==0):
                     # show(img,output,label)
@@ -79,20 +80,20 @@ def train_classifier(model, train_loader, test_loader, exp_name='experiment',lr=
                     optimizer.step()
                     optimizer.zero_grad()
 
-                    acc = accuracy_score(y.data.to('cpu'),output.data.to('cpu').max(1)[1])
+                    #acc = accuracy_score(y.data.to('cpu'),output.data.to('cpu').max(1)[1])
                     loss_meter.add(l.item(),n)
-                    acc_meter.add(acc,n)
+                    #acc_meter.add(acc,n)
                     #loggiamo i risultati iterazione per iterazione solo durante il training
 
                     if mode=='train':
                         writer.add_scalar('loss/train', loss_meter.value(), global_step=global_step)
-                        writer.add_scalar('accuracy/train', acc_meter.value(), global_step=global_step)
+                        #writer.add_scalar('accuracy/train', acc_meter.value(), global_step=global_step)
 
 
 
             #una volta finita l'epoca (sia nel caso di training che test, loggiamo le stime finali)
             writer.add_scalar('loss/' + mode, loss_meter.value(), global_step=global_step)
-            writer.add_scalar('accuracy/' + mode, acc_meter.value(), global_step=global_step)
+            #writer.add_scalar('accuracy/' + mode, acc_meter.value(), global_step=global_step)
         
 
         #conserviamo i pesi del modello alla fine di un ciclo di training e test
@@ -107,30 +108,46 @@ def test_classifier(model, loader):
     acc_sh = []
     js_sh = []
 
-
     device = "cpu"
     model.to(device)
 
-    model.eval()
+    #model.eval()
 
     predictions, labels = [], []
-    for img,label in loader:
+    for batch in loader:
 
-
-        x = img.to(device)
-        y = label.to(device)
-
+        #[batch_size, channels, height, width].
+        x = batch["image"].to(device)
+        y = batch["label"].to(device)
 
         output = model(x)
 
         print(x.shape)
         print(y.shape)
+        print(output.shape)
 
 
-        pred = output.data.max(1)[1].cpu().numpy()
-        gt = y.data.cpu().numpy()
+        #pred = output.data.cpu()
+        #gt = y.data.cpu()
+        
 
-        sh_metrics = metrics(gt.flatten(), pred.flatten())
+        lbl = y.cpu().detach().numpy().reshape(-1)
+        target = output.cpu().detach().numpy().reshape(-1)       
+
+        print(lbl)
+        print(target)
+
+        print(jsc(target,lbl))
+
+        exit()
+
+        #sh_metrics = metrics(gt, pred)
+
+        jacc = MulticlassJaccardIndex(num_classes=25)
+        acc = jacc(gt, pred)
+
+        print(acc)
+        exit()
 
         acc_sh.append(sh_metrics[0])
         js_sh.append(sh_metrics[1])
@@ -142,16 +159,16 @@ def test_classifier(model, loader):
     acc_s = sum(acc_sh)/len(acc_sh)
     js_s = sum(js_sh)/len(js_sh)
 
-
-
     return acc_s, js_s
 
 
 def metrics(true_label,predicted_label):
     #Accuracy Score
-    acc = skm.accuracy_score(true_label, predicted_label, normalize=True)
+    jacc = metric = MulticlassJaccardIndex(num_classes=25)
+
+    acc = jacc(true_label, predicted_label)
     
-    #Jaccard Score/IoU
+    #Jaccard Score/IoU https://scikit-learn.org/stable/modules/model_evaluation.html#jaccard-similarity-score
     js = skm.jaccard_score(true_label, predicted_label, average='micro')
     
     result_gm_sh = [acc, js]
