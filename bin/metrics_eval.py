@@ -5,9 +5,10 @@ from os.path import join
 from torch import nn
 import torch
 import numpy as np
-from bin.utils import show
+
 from torchmetrics.classification import MulticlassJaccardIndex
 from sklearn.metrics import jaccard_score as jsc
+from sklearn.metrics import accuracy_score as acs
 import sklearn.metrics as skm
 import torch.nn.functional as F
 
@@ -31,7 +32,7 @@ class AverageValueMeter():
         except:
             return None
 
-"""
+
 def cross_entropy2d(input, target, weight=None, size_average=True):
     n, c, h, w = input.size()
     nt, ht, wt = target.size()
@@ -46,7 +47,7 @@ def cross_entropy2d(input, target, weight=None, size_average=True):
         input, target, weight=weight, size_average=size_average, ignore_index=250
     )
     return loss
-"""
+
 
 def train_classifier(model, train_loader, test_loader, exp_name='experiment',lr=0.001, epochs=100, momentum=0.9):
     criterion = nn.CrossEntropyLoss() 
@@ -68,6 +69,8 @@ def train_classifier(model, train_loader, test_loader, exp_name='experiment',lr=
     global_step = 0
     for e in range(epochs):
     #iteriamo tra due modalità: train e test
+
+        nsamples = 100
         for mode in ['train','test']:
             loss_meter.reset(); acc_meter.reset()
             model.train() if mode == 'train' else model.eval()
@@ -78,24 +81,27 @@ def train_classifier(model, train_loader, test_loader, exp_name='experiment',lr=
                     x=batch['image'].to(device)
                     y=batch['label'].to(device)
 
-                    #print(type(x))
-                    #print(type(y))
+                    if i > nsamples:
+                        break
+                    
 
                     #pred = batch['image'].data.max(1)[1].cpu().numpy()
                     #gt = batch['label'].data.cpu().numpy()
 
                     output = model(x)
-
-
-
                     #aggiorniamo il global_step
                     #conterrà il numero di campioni visti durante il training
                     n = x.shape[0] #numero di elementi nel batch
                     global_step += n
 
-                    masks = torch.argmax(y, dim=1)
 
-                    l = criterion(output,masks)
+                    print(x.shape)
+                    print(y.shape)
+                    print(output.shape)
+
+                    mask = torch.argmax(y, dim=1)
+
+                    l = criterion(output,mask)
                     #l = cross_entropy2d(output,y)
                     if mode=='train':
                         l.backward()
@@ -145,20 +151,22 @@ def test_classifier(model, loader):
     #eval mode?
     model.eval()
     predictions, labels = [], []
-    for batch in loader:
 
+    nsamples = 100
+
+    print("EVALUATING...")
+    for i,batch in tqdm(enumerate(loader)):
+
+        if i > nsamples:
+            break
         #[batch_size, channels, height, width].
         x = batch["image"].to(device)
         y = batch["label"].to(device)
 
-        print(y)
+        #print(y) #dovrebbe essere int --> da fare in transformation
+        #resikved
 
         output = model(x)
-
-        print(x.shape)
-        print(y.shape)
-        print(output.shape)
-
 
         #pred = output.data.cpu()
         #gt = y.data.cpu()
@@ -167,22 +175,8 @@ def test_classifier(model, loader):
         pred = output.data.max(1)[1].cpu().numpy()
         gt = y.data.cpu().numpy()
 
-        print(pred.shape)
-        print(gt.shape)
 
-    
-        #print(jsc(pred,gt))
-        print(jsc(pred.flatten(),gt.flatten()))
-
-        exit()
-
-        #sh_metrics = metrics(gt, pred)
-
-        jacc = MulticlassJaccardIndex(num_classes=25)
-        acc = jacc(gt, pred)
-
-        print(acc)
-        exit()
+        sh_metrics = metrics(gt.flatten(), pred.flatten())
 
         acc_sh.append(sh_metrics[0])
         js_sh.append(sh_metrics[1])
@@ -191,17 +185,21 @@ def test_classifier(model, loader):
         predictions.extend(list(pred))
         labels.extend(list(gt))
 
-    acc_s = sum(acc_sh)/len(acc_sh)
-    js_s = sum(js_sh)/len(js_sh)
+    #acc_s = sum(acc_sh)/len(acc_sh)
+    acc_s = sum(acc_sh)/len(nsamples)
+    #js_s = sum(js_sh)/len(js_sh)
+    js_s = sum(js_sh)/len(nsamples)
+
+    print("Different Metrics were: ", acc_s) 
+    print("Different Metrics were: ", js_s) 
 
     return acc_s, js_s
 
 
 def metrics(true_label,predicted_label):
     #Accuracy Score
-    jacc = metric = MulticlassJaccardIndex(num_classes=25)
+    acc = acs(true_label,predicted_label,normalize=True)
 
-    acc = jacc(true_label, predicted_label)
     
     #Jaccard Score/IoU https://scikit-learn.org/stable/modules/model_evaluation.html#jaccard-similarity-score
     js = skm.jaccard_score(true_label, predicted_label, average='micro')
