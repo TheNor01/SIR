@@ -42,7 +42,7 @@ class UNet(nn.Module):
         self.dconv2 = Convblock(128,64)
         self.upconv1 = nn.ConvTranspose2d(64,32,3,2,0,1)
         self.dconv1 = Convblock(64,32)
-        self.out = nn.Conv2d(32,3,1,1)
+        self.out = nn.Conv2d(32,classes,1,1)
         self.retain = retain
         
     def forward(self,x):
