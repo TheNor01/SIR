@@ -69,7 +69,7 @@ if __name__ == '__main__':
     dictNameXLabels = labels.namelabelValid
     voidIdLabels.add(-1)
     label_colous = dict(zip(range(len(validLabels)), dictIDxColors.values()))
-
+    print(label_colous)
     #we have to define a undefined label? as void?
 
     """
@@ -100,13 +100,21 @@ if __name__ == '__main__':
     #print(img['image'],img['label'].shape)
 
     #fig,ax=plt.subplots(ncols=2,nrows=1,figsize=(16,8))
-    #ax[0].imshow(img['image'].permute(1, 2, 0))
-    #ax[1].imshow(img['label'].permute(1, 2, 0))
+
+    imgTrain = img['image']
+    maskTrain = img['label']
+
+    print(imgTrain.shape)
+    print(maskTrain.shape)
+
+    #ax[0].imshow(imgTrain.permute(1, 2, 0))
+    #ax[1].imshow(maskTrain)
     #plt.show()
     #plt.clf()
 
     #print(train_data[0]['image'].shape)
     #print(train_data[0]['label'].shape)
+
 
     val_data = ImagesDataset(
         path_data, 
@@ -118,6 +126,8 @@ if __name__ == '__main__':
         customSize
     )
     
+
+    """
 
     img = val_data[5]
     #print(img['image'],img['label'].shape)
@@ -134,7 +144,6 @@ if __name__ == '__main__':
     print(len(torch.unique(img['label'])))
 
 
-    """
     def encode_segmap(mask):
     #remove unwanted classes and recitify the labels of wanted classes
         for _voidc in voidIdLabels:
@@ -160,7 +169,7 @@ if __name__ == '__main__':
 
 
     
-    
+
     EPOCHS = 2
     BATCH_SIZE = 15
     LR = 0.001
@@ -182,14 +191,18 @@ if __name__ == '__main__':
 
     #============================
 
+    class_values= list(labels.fullLabelColor.keys())
+
+
 
     model = None
     modelString = ""
     if(choosedModel==0):
         #model = UNet(3,len(validLabels)).float().to("cpu")
         #modelString= "unet"
-        model = R2U_Net(img_ch=3,output_ch=len(validLabels)).to("cpu")
-        modelString= "resnet"
+        model = R2U_Net(img_ch=3,output_ch=len(class_values)).to("cpu")
+        #modelString= "resnet"
+        modelString= "resnet_online"
     elif(choosedModel==1):
         model = DeepLab50(len(validLabels)) #to fix
         modelString= "deeplab"
@@ -221,8 +234,9 @@ if __name__ == '__main__':
         trained = model
     print("TRAINING COMPLETED")
 
-    #accuracy_score, iou_score = test_classifier(trained,train_loader) #first on train
+    accuracy_score, iou_score = test_classifier(trained,train_loader,len(validLabels),label_colous) #first on train
 
+    exit()
     #Single inference
     model.eval()
     

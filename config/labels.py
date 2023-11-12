@@ -86,4 +86,4 @@ def init():
     id2labelValid  = { label.id  : label.color for label in labels if label.ignoreInEval==False}
     namelabelValid  = { label.name  : label.id for label in labels if label.ignoreInEval==False}
     voidLabels  = { label.id for label in labels if label.ignoreInEval==True}
-    fullLabelColor  =  {label.id : np.asarray(label.color) for label in labels }
+    fullLabelColor  =  {label.id : label.color for label in labels }

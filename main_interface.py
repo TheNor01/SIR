@@ -39,9 +39,6 @@ ignore_index = 250
 
 #dictIDxColors[ignore_index] = (0,0,0)
 validLabels = list(dictIDxColors.keys())
-class_map = dict(zip(validLabels, range(len(validLabels))))
-
-
 
 size=64
 
@@ -49,12 +46,11 @@ if __name__ == '__main__':
 
 
     #load model
-    #modelUnet = UNet(3,classes=len(class_map)).float().to("cpu")
+    #modelUnet = UNet(3,classes=len(validLabels)).to("cpu")
     #modelUnet.load_state_dict(torch.load("./checkpoint_model/unet.pth"))
     #modelUnet.eval()
     
-
-    modelRes = R2U_Net(img_ch=3,output_ch=len(class_map)).float().to("cpu")
+    modelRes = R2U_Net(img_ch=3,output_ch=len(validLabels)).to("cpu")
     modelRes.load_state_dict(torch.load("./checkpoint_model/resnet.pth"))
     modelRes.eval()
 
@@ -80,10 +76,10 @@ if __name__ == '__main__':
 
 
             imageToLoad = Image.open(globalPath)
-            imageToLoad.save("./resources/interface/"+"image_to_analyze.png")
+            #mageToLoad = np.array(imageToLoad, dtype=np.uint8)
+            imageToLoad = imageToLoad.resize([64,64])
 
-            imageToLoad = np.array(imageToLoad, dtype=np.uint8)
-            imageToLoad = np.array(Image.fromarray(imageToLoad).resize([size,size]))
+            imageToLoad.save("./resources/interface/"+"image_to_analyze.png")
 
 
             img = ImageTk.PhotoImage(imageToLoad)
@@ -96,8 +92,6 @@ if __name__ == '__main__':
         choosenModel=None
 
         print("model load")
-
-
         valueModel = [listbox.get(idx) for idx in listbox.curselection()]
         if(len(valueModel)==0):
              model = None
@@ -121,10 +115,24 @@ if __name__ == '__main__':
             return
 
         print("classify: "+ path_entry.get())
-        imageToLoad = Image.open("./resources/interface/"+"audio_spectrum.png")
+        imageToLoad = Image.open("./resources/interface/"+"image_to_analyze.png")
         new_image = imageToLoad.resize((64, 64))
 
-        img = Image.open(imageToLoad)
+        tf=transforms.Compose([
+                transforms.ToTensor(),
+            ])
+        
+        imageTransformed = tf(new_image).unsqueeze(0)
+
+        print(imageTransformed.shape)
+        #model.eval()
+        with torch.no_grad():
+            output = model(imageTransformed.to("cpu"))
+            print("predicted OUTPUT")
+            print(output.shape)
+            plt.imshow(output.permute(1, 2, 0))
+
+
 
     def clear():
         #true_label.delete(0,'end')

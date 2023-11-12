@@ -12,6 +12,10 @@ from sklearn.metrics import accuracy_score as acs
 import sklearn.metrics as skm
 import torch.nn.functional as F
 
+from matplotlib import pyplot as plt
+
+from bin.utils import decode_segmap
+
 from tqdm import tqdm
 
 class AverageValueMeter():
@@ -99,9 +103,9 @@ def train_classifier(model, train_loader, test_loader, exp_name='experiment',lr=
                     print(y.shape)
                     print(output.shape)
 
-                    mask = torch.argmax(y, dim=1)
+                    #mask = torch.argmax(y, dim=1)
 
-                    l = criterion(output,mask)
+                    l = criterion(output,y)
                     #l = cross_entropy2d(output,y)
                     if mode=='train':
                         l.backward()
@@ -138,9 +142,9 @@ def train_classifier(model, train_loader, test_loader, exp_name='experiment',lr=
     return model
 
 
+#https://github.com/sacmehta/ESPNet/blob/master/train/IOUEval.py to add
 
-
-def test_classifier(model, loader):
+def test_classifier(model, loader,validLabels,label_colous):
 
     acc_sh = []
     js_sh = []
@@ -172,8 +176,24 @@ def test_classifier(model, loader):
         #gt = y.data.cpu()
         
 
+        #https://stackoverflow.com/questions/54083220/why-does-this-semantic-segmentation-network-have-no-softmax-classification-layer
+        #no softmax?
+
         pred = output.data.max(1)[1].cpu().numpy()
         gt = y.data.cpu().numpy()
+
+        if i % 100 == 0:
+            
+            # Model Prediction
+            decoded_pred = decode_segmap(pred[0],validLabels,label_colous)
+            plt.imshow(decoded_pred)
+            plt.show()
+            plt.clf()
+            
+            # Ground Truth
+            decode_gt = decode_segmap(gt[0],validLabels,label_colous)
+            plt.imshow(decode_gt)
+            plt.show()
 
 
         sh_metrics = metrics(gt.flatten(), pred.flatten())
@@ -186,9 +206,9 @@ def test_classifier(model, loader):
         labels.extend(list(gt))
 
     #acc_s = sum(acc_sh)/len(acc_sh)
-    acc_s = sum(acc_sh)/len(nsamples)
+    acc_s = sum(acc_sh)/(nsamples)
     #js_s = sum(js_sh)/len(js_sh)
-    js_s = sum(js_sh)/len(nsamples)
+    js_s = sum(js_sh)/(nsamples)
 
     print("Different Metrics were: ", acc_s) 
     print("Different Metrics were: ", js_s) 
