@@ -11,20 +11,20 @@ import matplotlib.pyplot as plt
 import torch.nn.functional as F
 import torchvision.transforms as transform
 from torch.utils.data import DataLoader
-
+import torchvision
 from bin.loaders import ImagesDataset
 import time
 from torch.utils.tensorboard import SummaryWriter
 from config import labels
 import calendar
-
+import cv2
 from bin.models.UNET import UNet
 from bin.models.DEEPLAB import DeepLab50
 from bin.models.RESNET import R2U_Net
 #import segmentation_models_pytorch as smp
 from bin.metrics_eval import train_classifier,test_classifier
 
-from bin.utils import decode_segmap
+from bin.utils import draw_segmentation_map,decode_segmap
 
 #to do:
 
@@ -39,16 +39,9 @@ from bin.utils import decode_segmap
 
 if __name__ == '__main__':
 
-    choosedModel = 0
-    customSize = 64 #for unet at least 128
+    choosedModel = 2
+    customSize = 128 #for unet at least 128
     labels.init()
-    #https://www.kaggle.com/code/sudhupandey/cityscape-segmentation-unet-pytorch#kln-108
-
-
-    train_path = glob("dataset/cityscapes_data/cityscapes_data/train_small/*")
-    valid_path = glob("dataset/cityscapes_data/cityscapes_data/val_small/*")
-
-    #======================
 
     
     #https://stackoverflow.com/questions/56650201/how-to-convert-35-classes-of-cityscapes-dataset-to-19-classes/64242989#64242989
@@ -65,22 +58,13 @@ if __name__ == '__main__':
     
     voidIdLabels = (labels.voidLabels)
     
-
     dictNameXLabels = labels.namelabelValid
     voidIdLabels.add(-1)
     label_colous = dict(zip(range(len(validLabels)), dictIDxColors.values()))
     print(label_colous)
     #we have to define a undefined label? as void?
 
-    """
-    print("RGB colors: "+ str(len(dictIDxColors)))
-    print(validLabels)
-    print(dictIDxColors)
-    print(dictNameXLabels)
-    print("void colors: "+ str(len(voidIdLabels)))
-    print(voidIdLabels)
-    """
-    
+
     print(class_map)
     #CREATE IMAGES DATASET
 
@@ -127,48 +111,11 @@ if __name__ == '__main__':
     )
     
 
-    """
-
-    img = val_data[5]
-    #print(img['image'],img['label'].shape)
-
-    fig,ax=plt.subplots(ncols=2,nrows=1,figsize=(16,8))
-    ax[0].imshow(img['image'].permute(1, 2, 0))
-    #ax[1].imshow(img['label'].permute(1, 2, 0))
-    ax[1].imshow(img['label'].permute(1, 2, 0))
-
-    plt.show()
-    plt.clf()
-    
-    print(torch.unique(img['label']))
-    print(len(torch.unique(img['label'])))
-
-
-    def encode_segmap(mask):
-    #remove unwanted classes and recitify the labels of wanted classes
-        for _voidc in voidIdLabels:
-            mask[mask == _voidc] = ignore_index
-        for _validc in validLabels:
-            mask[mask == _validc] = class_map[_validc]
-        return mask
-
-    res=encode_segmap(img['label'].clone())
-    print(res.shape)
-    print(torch.unique(res))
-    print(len(torch.unique(res)))
-
-    fig,ax=plt.subplots(ncols=2,figsize=(12,10))  
-    ax[0].imshow(res,cmap='gray')
-    ax[1].imshow(res1)
-
-    res1=decode_segmap(res.clone(),len(validLabels),label_colous)
-    """
 
     print(val_data[0]['image'].shape)
     print(val_data[0]['label'].shape)
 
 
-    
 
     EPOCHS = 2
     BATCH_SIZE = 15
@@ -193,6 +140,8 @@ if __name__ == '__main__':
 
     class_values= list(labels.fullLabelColor.keys())
 
+    RGB_values = list(labels.fullLabelColor.values())
+
 
 
     model = None
@@ -206,8 +155,11 @@ if __name__ == '__main__':
     elif(choosedModel==1):
         model = DeepLab50(len(validLabels)) #to fix
         modelString= "deeplab"
+    elif(choosedModel==2):
+        model = UNet(3,classes=len(class_values)).to("cpu")
+        modelString= "unet"
 
-    print("MODEL HAS BEEN CREATED...\n")
+    print(modelString+"-- MODEL HAS BEEN CREATED...\n")
 
     """
     train_epochs = 8
@@ -224,7 +176,8 @@ if __name__ == '__main__':
     print("Current timestamp:", ts)
 
     #use ignore index
-    doTrain = 0
+    doTrain = 1
+    doVal = 0
     trained=None
     if(doTrain):
         trained = train_classifier(model, train_loader,val_loader, exp_name=str(ts)+"_color", epochs = EPOCHS,lr=LR,momentum=0.5)
@@ -234,58 +187,52 @@ if __name__ == '__main__':
         trained = model
     print("TRAINING COMPLETED")
 
-    accuracy_score, iou_score = test_classifier(trained,train_loader,len(validLabels),label_colous) #first on train
+    if(doVal):
+        accuracy_score, iou_score = test_classifier(trained,train_loader,len(validLabels),label_colous) #first on train
+        print("TRAINING")
+        print(accuracy_score,iou_score)
+        accuracy_score, iou_score = test_classifier(trained,val_loader)
 
-    exit()
+        print("VALIDATION")
+        print(accuracy_score,iou_score)
+
+
+
+
     #Single inference
-    model.eval()
-    
     dummy = (train_data[0]['image']).to("cpu")
     dummyLabel = (train_data[0]['label']).to("cpu")
 
+    gt = dummyLabel.data.cpu().numpy()
 
     plt.imshow(dummy.permute(1, 2, 0)  )
     plt.show()
     plt.clf()
 
-    val_pred = model(dummy.unsqueeze(0))
+    print(dummyLabel.shape)
+    print(dummyLabel)
+    print(gt.shape)
 
-    print(dummy.shape,dummyLabel.shape,val_pred.shape)
+    model.eval()
 
-
-
-
-    prediction = val_pred.data.max(1)[1].cpu().numpy()
-    ground_truth = dummyLabel.data.cpu().numpy()
-
-
-    plt.imshow(ground_truth[:,:,0], cmap='gray')
-    plt.show()
-    plt.clf()
-
-
-    print(label_colous)
-
-    """
     with torch.no_grad():
+        val_pred = model(dummy.unsqueeze(0)).to("cpu")
 
-        # Model Prediction
-        decoded_pred = decode_segmap(prediction[0],len(validLabels),label_colous)
-        plt.imshow(decoded_pred)
-        plt.show()
-        plt.clf()
+        print(dummy.shape,dummyLabel.shape,val_pred.shape)
+
+        mask = draw_segmentation_map(val_pred,RGB_values)
+
+
+        #mask2 = decode_segmap(gt[0],len(validLabels),label_colous)
+        #plt.imshow(mask2)
+        #plt.show()
+
+        cv2.imshow('Segmented image', mask)
+        cv2.waitKey(0)
+
         
-        # Ground Truth
-        decode_gt = decode_segmap(ground_truth,len(validLabels),label_colous)
-        plt.imshow(decode_gt)
-        plt.show()
-    """
 
+        #backtorgb = cv2.cvtColor(dummyLabel.numpy(),cv2.COLOR_GRAY2RGB)
 
-
-    #print(accuracy_score,iou_score)
-    
-    exit()
-    accuracy_score, iou_score = test_classifier(trained,vaild_loader)
-
-    print(accuracy_score,iou_score)
+        cv2.imwrite("./my_out.png",mask)
+        cv2.imwrite("./my_mask.png",dummyLabel.numpy())

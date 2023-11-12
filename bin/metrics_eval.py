@@ -151,11 +151,8 @@ def test_classifier(model, loader,validLabels,label_colous):
 
     device = "cpu"
     model.to(device)
-
     #eval mode?
     model.eval()
-    predictions, labels = [], []
-
     nsamples = 100
 
     print("EVALUATING...")
@@ -194,16 +191,12 @@ def test_classifier(model, loader,validLabels,label_colous):
             decode_gt = decode_segmap(gt[0],validLabels,label_colous)
             plt.imshow(decode_gt)
             plt.show()
-
-
+    
         sh_metrics = metrics(gt.flatten(), pred.flatten())
 
         acc_sh.append(sh_metrics[0])
         js_sh.append(sh_metrics[1])
 
-
-        predictions.extend(list(pred))
-        labels.extend(list(gt))
 
     #acc_s = sum(acc_sh)/len(acc_sh)
     acc_s = sum(acc_sh)/(nsamples)

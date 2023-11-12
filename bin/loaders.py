@@ -147,18 +147,8 @@ class ImagesDataset(Dataset):
         #plt.imshow(img)
         #plt.show()
 
-
-        mask = cv2.resize(mask, (128, 128))
+        mask = cv2.resize(mask, (self.size, self.size))
         mask = cv2.cvtColor(mask, cv2.COLOR_BGR2RGB).astype('float32')
-
-
-        img = mask[...,::-1] #plt use RGB
-        #plt.imshow(img)
-        #plt.show()
-
-        #transformed = self.tfms(image=image, mask=mask)
-        #image = transformed['image']
-        #mask = transformed['mask']
 
         def get_label_mask(mask, class_values, label_colors_list):
 
@@ -193,18 +183,10 @@ class ImagesDataset(Dataset):
 
         mask = get_label_mask(mask, class_values, label_colors_list)
 
-        #plt.imshow(mask, interpolation='nearest')
-        #plt.show()
-       
         image = np.transpose(image, (2, 0, 1))
         
         image = torch.tensor(image, dtype=torch.float)
         mask = torch.tensor(mask, dtype=torch.long) 
-
-    
-        #return image, mask
-
-
 
         return {'image' : image, 'label':mask}
     
