@@ -11,7 +11,6 @@ import matplotlib.pyplot as plt
 import torch.nn.functional as F
 import torchvision.transforms as transform
 from torch.utils.data import DataLoader
-import torchvision
 from bin.loaders import ImagesDataset
 import time
 from torch.utils.tensorboard import SummaryWriter
@@ -19,7 +18,7 @@ from config import labels
 import calendar
 import cv2
 from bin.models.UNET import UNet
-from bin.models.DEEPLAB import DeepLab50
+from bin.models.DEEPLAB import GetDeeplabModel
 from bin.models.RESNET import R2U_Net
 #import segmentation_models_pytorch as smp
 from bin.metrics_eval import train_classifier,test_classifier
@@ -40,32 +39,61 @@ from bin.utils import draw_segmentation_map,decode_segmap
 if __name__ == '__main__':
 
     choosedModel = 2
-    customSize = 128 #for unet at least 128
+    customSize = 100 #for unet at least 128
+
+    current_GMT = time.gmtime()
+    ts = calendar.timegm(current_GMT)
+    print("Current timestamp:", ts)
+
+    #use ignore index
+    doTrain = 0
+    doVal = 1
+    trained=None
+
     labels.init()
 
+    fullLabelColor = labels.fullLabelColor
+    class_values= list(fullLabelColor.keys())
+    RGB_values = list(fullLabelColor.values())
+
+    model = None
+    modelString = ""
+    if(choosedModel==0):
+        model = R2U_Net(img_ch=3,output_ch=len(class_values)).to("cpu")
+        modelString= "resnet_online"
+    elif(choosedModel==1):
+        model = GetDeeplabModel(len(class_values)) #to fix
+        modelString= "deeplab"
+    elif(choosedModel==2):
+        model = UNet(3,classes=len(class_values)).to("cpu")
+        modelString= "unet"
+
+    print(modelString+"-- MODEL HAS BEEN CREATED...\n")
     
     #https://stackoverflow.com/questions/56650201/how-to-convert-35-classes-of-cityscapes-dataset-to-19-classes/64242989#64242989
 
-    dictIDxColors = labels.id2labelValid
+    # Confusing 
+    #dictIDxColors = labels.id2labelValid
 
-    ignore_index = 250
+    #ignore_index = 250
     #dictIDxColors[ignore_index] = (0,0,0)
-    validLabels = list(dictIDxColors.keys())
-    class_map = dict(zip(validLabels, range(len(validLabels))))
-
+    #validLabels = list(dictIDxColors.keys())
+    #class_map = dict(zip(validLabels, range(len(validLabels))))
     #print(dictIDxColors)
     #print(class_map)
+
+    #voidIdLabels = (labels.voidLabels)
     
-    voidIdLabels = (labels.voidLabels)
-    
-    dictNameXLabels = labels.namelabelValid
-    voidIdLabels.add(-1)
-    label_colous = dict(zip(range(len(validLabels)), dictIDxColors.values()))
-    print(label_colous)
+    #dictNameXLabels = labels.namelabelValid
+    #voidIdLabels.add(-1)
+    #label_colous = dict(zip(range(len(validLabels)), dictIDxColors.values()))
+    #print(label_colous)
     #we have to define a undefined label? as void?
 
+    #print(class_map)
 
-    print(class_map)
+
+    #==========================
     #CREATE IMAGES DATASET
 
     path_data = './dataset/'
@@ -73,17 +101,15 @@ if __name__ == '__main__':
     train_data = ImagesDataset(
         path_data, 
         'train',
-        validLabels,
-        voidIdLabels,
-        ignore_index,
-        class_map,
-        customSize
+        #validLabels,
+        #voidIdLabels,
+        #ignore_index,
+        #class_map,
+        customSize,
+        fullLabelColor
     )
 
     img = train_data[5]
-    #print(img['image'],img['label'].shape)
-
-    #fig,ax=plt.subplots(ncols=2,nrows=1,figsize=(16,8))
 
     imgTrain = img['image']
     maskTrain = img['label']
@@ -91,26 +117,25 @@ if __name__ == '__main__':
     print(imgTrain.shape)
     print(maskTrain.shape)
 
-    #ax[0].imshow(imgTrain.permute(1, 2, 0))
-    #ax[1].imshow(maskTrain)
-    #plt.show()
-    #plt.clf()
+    fig,ax=plt.subplots(ncols=2,nrows=1,figsize=(16,8))
 
-    #print(train_data[0]['image'].shape)
-    #print(train_data[0]['label'].shape)
+    ax[0].imshow(imgTrain.permute(1, 2, 0))
+    ax[1].imshow(maskTrain)
+    plt.show()
+    plt.clf()
 
 
     val_data = ImagesDataset(
         path_data, 
         'val',
-        validLabels,
-        voidIdLabels,
-        ignore_index,
-        class_map,
-        customSize
+        #validLabels,
+        #voidIdLabels,
+        #ignore_index,
+        #class_map,
+        customSize,
+        fullLabelColor
     )
     
-
 
     print(val_data[0]['image'].shape)
     print(val_data[0]['label'].shape)
@@ -138,49 +163,12 @@ if __name__ == '__main__':
 
     #============================
 
-    class_values= list(labels.fullLabelColor.keys())
-
-    RGB_values = list(labels.fullLabelColor.values())
-
-
-
-    model = None
-    modelString = ""
-    if(choosedModel==0):
-        #model = UNet(3,len(validLabels)).float().to("cpu")
-        #modelString= "unet"
-        model = R2U_Net(img_ch=3,output_ch=len(class_values)).to("cpu")
-        #modelString= "resnet"
-        modelString= "resnet_online"
-    elif(choosedModel==1):
-        model = DeepLab50(len(validLabels)) #to fix
-        modelString= "deeplab"
-    elif(choosedModel==2):
-        model = UNet(3,classes=len(class_values)).to("cpu")
-        modelString= "unet"
-
-    print(modelString+"-- MODEL HAS BEEN CREATED...\n")
-
-    """
-    train_epochs = 8
-    n_classes = 19
-    batch_size = 1
-    num_workers = 1
-    learning_rate = 1e-6
-    """
-
     #https://www.kaggle.com/code/sudhupandey/cityscape-segmentation-unet-pytorch
 
-    current_GMT = time.gmtime()
-    ts = calendar.timegm(current_GMT)
-    print("Current timestamp:", ts)
 
-    #use ignore index
-    doTrain = 1
-    doVal = 0
-    trained=None
+
     if(doTrain):
-        trained = train_classifier(model, train_loader,val_loader, exp_name=str(ts)+"_color", epochs = EPOCHS,lr=LR,momentum=0.5)
+        trained = train_classifier(model,modelString,train_loader,val_loader, exp_name=str(ts)+"_"+modelString, epochs = EPOCHS,lr=LR,momentum=0.5)
         torch.save(model.state_dict(), "./checkpoint_model/"+modelString+".pth")
     else:
         model.load_state_dict(torch.load("./checkpoint_model/"+modelString+".pth"))
@@ -188,18 +176,16 @@ if __name__ == '__main__':
     print("TRAINING COMPLETED")
 
     if(doVal):
-        accuracy_score, iou_score = test_classifier(trained,train_loader,len(validLabels),label_colous) #first on train
-        print("TRAINING")
+        accuracy_score, iou_score = test_classifier(trained,modelString,train_loader,len(class_values),fullLabelColor) #first on train
+        print("TRAINING metrics")
         print(accuracy_score,iou_score)
-        accuracy_score, iou_score = test_classifier(trained,val_loader)
+        accuracy_score, iou_score = test_classifier(trained,modelString,val_loader,len(class_values),fullLabelColor)
 
-        print("VALIDATION")
+        print("VALIDATION metrics")
         print(accuracy_score,iou_score)
-
-
-
 
     #Single inference
+    """
     dummy = (train_data[0]['image']).to("cpu")
     dummyLabel = (train_data[0]['label']).to("cpu")
 
@@ -214,7 +200,6 @@ if __name__ == '__main__':
     print(gt.shape)
 
     model.eval()
-
     with torch.no_grad():
         val_pred = model(dummy.unsqueeze(0)).to("cpu")
 
@@ -236,3 +221,4 @@ if __name__ == '__main__':
 
         cv2.imwrite("./my_out.png",mask)
         cv2.imwrite("./my_mask.png",dummyLabel.numpy())
+    """

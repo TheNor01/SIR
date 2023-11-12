@@ -24,6 +24,8 @@ def draw_segmentation_map(outputs,RGB_values):
     segmentation_map = np.stack([red_map, green_map, blue_map], axis=2)
     return segmentation_map
 
+## alternative --??
+
 def decode_segmap(temp,n_classes,dictLabelRange):
         r = temp.copy()
         g = temp.copy()

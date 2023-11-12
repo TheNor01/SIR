@@ -15,14 +15,16 @@ import tkinter as tk
 from tkinter import filedialog
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from PIL import ImageTk, Image
-from PIL import ImageChops,Image
 from config import labels
 from bin.models.UNET import UNet
 from bin.models.RESNET import R2U_Net
 
+import cv2
+
+from bin.utils import draw_segmentation_map
+
 
 screen = tk.Tk()
-
 globalPath = ""
 
 listbox = tk.Listbox(screen, selectmode=tk.SINGLE)
@@ -31,28 +33,22 @@ classifierNames = ['unet', 'deeplabv3','ppsnet','resnet']
 for classifier in classifierNames:
     listbox.insert(0, classifier)
 
-#alert if audio is not a .wav
 labels.init()
-dictIDxColors = labels.id2labelValid
+fullLabelColor = labels.fullLabelColor
+validLabels = list(fullLabelColor.keys())
 
-ignore_index = 250
-
-#dictIDxColors[ignore_index] = (0,0,0)
-validLabels = list(dictIDxColors.keys())
+RGB_values = list(fullLabelColor.values())
 
 size=64
 
 if __name__ == '__main__':
 
-
     #load model
-    #modelUnet = UNet(3,classes=len(validLabels)).to("cpu")
-    #modelUnet.load_state_dict(torch.load("./checkpoint_model/unet.pth"))
-    #modelUnet.eval()
+    modelUnet = UNet(3,classes=len(validLabels)).to("cpu")
+    modelUnet.load_state_dict(torch.load("./checkpoint_model/unet.pth"))
     
     modelRes = R2U_Net(img_ch=3,output_ch=len(validLabels)).to("cpu")
-    modelRes.load_state_dict(torch.load("./checkpoint_model/resnet.pth"))
-    modelRes.eval()
+    modelRes.load_state_dict(torch.load("./checkpoint_model/resnet_online.pth"))
 
     model = None
 
@@ -76,11 +72,9 @@ if __name__ == '__main__':
 
 
             imageToLoad = Image.open(globalPath)
-            #mageToLoad = np.array(imageToLoad, dtype=np.uint8)
-            imageToLoad = imageToLoad.resize([64,64])
+            imageToLoad = imageToLoad.resize([size,size])
 
             imageToLoad.save("./resources/interface/"+"image_to_analyze.png")
-
 
             img = ImageTk.PhotoImage(imageToLoad)
             imagebox.config(image=img)
@@ -98,6 +92,7 @@ if __name__ == '__main__':
         else:
             choosenModel = valueModel[0]
 
+
         if(choosenModel=="unet"):
             model = modelUnet
         elif(choosenModel=="resnet"):
@@ -109,7 +104,6 @@ if __name__ == '__main__':
             tk.messagebox.showerror(title="ERROR", message="CHOOSE ONE MODEL")
             return
 
-        predicted_label.delete(0,'end')
         if not path_entry.get():
             tk.messagebox.showerror(title="ERROR", message="PATH EMPTY")
             return
@@ -122,16 +116,20 @@ if __name__ == '__main__':
                 transforms.ToTensor(),
             ])
         
-        imageTransformed = tf(new_image).unsqueeze(0)
-
+        imageTransformed = tf(new_image)
         print(imageTransformed.shape)
-        #model.eval()
+        model.eval()
         with torch.no_grad():
-            output = model(imageTransformed.to("cpu"))
+            output = model(imageTransformed.unsqueeze(0)).to("cpu")
             print("predicted OUTPUT")
             print(output.shape)
-            plt.imshow(output.permute(1, 2, 0))
 
+            mask = draw_segmentation_map(output,RGB_values)
+
+            cv2.imshow('Segmented image', mask)
+            cv2.waitKey(0)
+
+            cv2.imwrite("./ resources/interface/my_out.png",mask)
 
 
     def clear():
@@ -148,12 +146,6 @@ if __name__ == '__main__':
 
     path_entry = tk.Entry(screen,textvariable = globalPath, width = "100")
     path_entry.grid(column=0,row=0)
-
-    #true_entry = tk.Label(screen, text = "true entry", width = "20")
-    #true_entry.grid(column = 0, row = 5)
-
-    #true_label = tk.Entry(screen,textvariable = "", width = "20",justify='center')
-    #true_label.grid(column=0,row=7)
 
 
     predicted_entry = tk.Label(screen, text = "label classified", width = "40")

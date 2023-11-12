@@ -53,7 +53,7 @@ def cross_entropy2d(input, target, weight=None, size_average=True):
     return loss
 
 
-def train_classifier(model, train_loader, test_loader, exp_name='experiment',lr=0.001, epochs=100, momentum=0.9):
+def train_classifier(model, modelString,train_loader, test_loader, exp_name='experiment',lr=0.001, epochs=100, momentum=0.9):
     criterion = nn.CrossEntropyLoss() 
     optimizer = SGD(model.parameters(), lr, momentum=momentum) 
     #meters
@@ -85,7 +85,7 @@ def train_classifier(model, train_loader, test_loader, exp_name='experiment',lr=
                     x=batch['image'].to(device)
                     y=batch['label'].to(device)
 
-                    if i > nsamples:
+                    if i > nsamples: #to discard
                         break
                     
 
@@ -93,14 +93,18 @@ def train_classifier(model, train_loader, test_loader, exp_name='experiment',lr=
                     #gt = batch['label'].data.cpu().numpy()
 
                     output = model(x)
+
+                    if(modelString=="deeplab"):
+                        output = output['out']
+
+
                     #aggiorniamo il global_step
                     #conterrà il numero di campioni visti durante il training
                     n = x.shape[0] #numero di elementi nel batch
                     global_step += n
 
-
                     print(x.shape)
-                    print(y.shape)
+                    #print(y.shape)
                     print(output.shape)
 
                     #mask = torch.argmax(y, dim=1)
@@ -109,7 +113,6 @@ def train_classifier(model, train_loader, test_loader, exp_name='experiment',lr=
                     #l = cross_entropy2d(output,y)
                     if mode=='train':
                         l.backward()
-
 
                     optimizer.step()
                     optimizer.zero_grad()
@@ -136,15 +139,12 @@ def train_classifier(model, train_loader, test_loader, exp_name='experiment',lr=
             writer.add_scalar('loss/' + mode, loss_meter.value(), global_step=global_step)
             #writer.add_scalar('accuracy/' + mode, acc_meter.value(), global_step=global_step)
         
-
-        #conserviamo i pesi del modello alla fine di un ciclo di training e test
-        #torch.save(model.state_dict(),'./resources/archive/stored/models/'+str(exp_name)+"_"+str(e)+".pth")
     return model
 
 
 #https://github.com/sacmehta/ESPNet/blob/master/train/IOUEval.py to add
 
-def test_classifier(model, loader,validLabels,label_colous):
+def test_classifier(model,modelString, loader,validLabels,label_colous):
 
     acc_sh = []
     js_sh = []
@@ -165,9 +165,11 @@ def test_classifier(model, loader,validLabels,label_colous):
         y = batch["label"].to(device)
 
         #print(y) #dovrebbe essere int --> da fare in transformation
-        #resikved
+        #resolved
 
         output = model(x)
+        if(modelString=="deeplab"):
+            output = output['out']
 
         #pred = output.data.cpu()
         #gt = y.data.cpu()
@@ -179,20 +181,27 @@ def test_classifier(model, loader,validLabels,label_colous):
         pred = output.data.max(1)[1].cpu().numpy()
         gt = y.data.cpu().numpy()
 
-        if i % 100 == 0:
+        if i % 100 == 3:
             
             # Model Prediction
-            decoded_pred = decode_segmap(pred[0],validLabels,label_colous)
+            decoded_pred = decode_segmap(pred[0],validLabels,label_colous) #doesn't work as expected here.
             plt.imshow(decoded_pred)
             plt.show()
             plt.clf()
+
             
             # Ground Truth
             decode_gt = decode_segmap(gt[0],validLabels,label_colous)
             plt.imshow(decode_gt)
             plt.show()
+
+            exit()
+
+
     
         sh_metrics = metrics(gt.flatten(), pred.flatten())
+
+        #add more metrics -- ex miou, pixel..
 
         acc_sh.append(sh_metrics[0])
         js_sh.append(sh_metrics[1])
