@@ -82,6 +82,7 @@ def init():
     global voidLabels 
     global namelabelValid 
     global fullLabelColor 
+    
     #prendere solo ignoreInEval False
     id2labelValid  = { label.id  : label.color for label in labels if label.ignoreInEval==False}
     namelabelValid  = { label.name  : label.id for label in labels if label.ignoreInEval==False}

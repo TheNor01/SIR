@@ -39,7 +39,7 @@ validLabels = list(fullLabelColor.keys())
 
 RGB_values = list(fullLabelColor.values())
 
-size=64
+size=256
 
 if __name__ == '__main__':
 
@@ -129,7 +129,7 @@ if __name__ == '__main__':
             cv2.imshow('Segmented image', mask)
             cv2.waitKey(0)
 
-            cv2.imwrite("./ resources/interface/my_out.png",mask)
+            cv2.imwrite("./resources/interface/my_out.png",mask)
 
 
     def clear():

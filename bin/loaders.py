@@ -69,14 +69,31 @@ class ImagesDataset(Dataset):
     """
     
     def get_label_mask(self,mask, class_values, label_colors_list):
-            label_mask = np.zeros((mask.shape[0], mask.shape[1]), dtype=np.uint8)
+            label_mask = np.zeros((mask.shape[0], mask.shape[1]), dtype=np.uint8) #3d zero
+
             for value in class_values:
-                for ii, label in enumerate(label_colors_list):
+                for i, label in enumerate(label_colors_list):
                     if value == label_colors_list.index(label):
                         label = np.array(label)
                         label_mask[np.where(np.all(mask == label, axis=-1))[:2]] = value
             label_mask = label_mask.astype(int)
             return label_mask
+    
+    def decode_segmap(self,temp,n_classes,dictLabelRange):
+        r = temp.copy()
+        g = temp.copy()
+        b = temp.copy()
+        for l in range(0, n_classes):
+            r[temp == l] = dictLabelRange[l][0]
+            g[temp == l] = dictLabelRange[l][1]
+            b[temp == l] = dictLabelRange[l][2]
+
+
+        rgb = np.zeros((temp.shape[0], temp.shape[1], 3))
+        rgb[:, :, 0] = r / 255.0
+        rgb[:, :, 1] = g / 255.0
+        rgb[:, :, 2] = b / 255.0
+        return rgb
         
 
 
@@ -143,7 +160,7 @@ class ImagesDataset(Dataset):
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB).astype('float32')
         image = image / 255.0
 
-        img = image[...,::-1] #plt use RGB
+        #img = image[...,::-1] #plt use RGB
         #plt.imshow(img)
         #plt.show()
 
@@ -155,17 +172,35 @@ class ImagesDataset(Dataset):
 
         
         # Get colored label mask.
-        label_colors_list= list(self.fullLabelColor.values())
         class_values= list(self.fullLabelColor.keys())
-
-
+        label_colors_list= list(self.fullLabelColor.values())
+        
+        idXRgb =  dict(zip(range(len(label_colors_list)), label_colors_list))
+        print(idXRgb)
         #remove parameters --> to self
 
         mask = self.get_label_mask(mask, class_values, label_colors_list)
+        maskDecoded = self.decode_segmap(mask, len(class_values), idXRgb)
+
+        print(mask)
+        print(np.unique(mask))
+
+        print(maskDecoded)
+        print(np.unique(maskDecoded))
+
         image = np.transpose(image, (2, 0, 1))
         
         image = torch.tensor(image, dtype=torch.float)
         mask = torch.tensor(mask, dtype=torch.long) 
+
+        print(mask/255)
+        plt.imshow(mask/255)
+        plt.show()
+        plt.clf()
+
+        plt.imshow(maskDecoded)
+        plt.show()
+        plt.clf()
 
         return {'image' : image, 'label':mask}
     
