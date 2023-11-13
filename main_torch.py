@@ -130,7 +130,6 @@ if __name__ == '__main__':
     plt.clf()
 
 
-    exit()
     val_data = ImagesDataset(
         path_data, 
         'val',

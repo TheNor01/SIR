@@ -72,7 +72,9 @@ def train_classifier(model, modelString,train_loader, test_loader, exp_name='exp
     #inizializziamo il global step
     global_step = 0
     for e in range(epochs):
-    #iteriamo tra due modalità: train e test
+
+        print(f"Epoch {e + 1}\n-------------------------------")
+        #iteriamo tra due modalità: train e test
 
         nsamples = 100
         for mode in ['train','test']:
@@ -103,9 +105,9 @@ def train_classifier(model, modelString,train_loader, test_loader, exp_name='exp
                     n = x.shape[0] #numero di elementi nel batch
                     global_step += n
 
-                    print(x.shape)
+                    #print(x.shape)
                     #print(y.shape)
-                    print(output.shape)
+                    #print(output.shape)
 
                     #mask = torch.argmax(y, dim=1)
 
@@ -143,6 +145,8 @@ def train_classifier(model, modelString,train_loader, test_loader, exp_name='exp
 
 
 #https://github.com/sacmehta/ESPNet/blob/master/train/IOUEval.py to add
+
+#Dice Coefficient https://stats.stackexchange.com/questions/273537/f1-dice-score-vs-iou
 
 def test_classifier(model,modelString, loader,validLabels,label_colous):
 

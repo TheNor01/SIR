@@ -78,13 +78,13 @@ def init():
         Label(  'license plate'        , 34 ,       19 , 'vehicle'         , 7       , False        , True         , (  0,  0,142) ),
     ]
 
-    global id2labelValid
-    global voidLabels 
-    global namelabelValid 
+    #global id2labelValid
+    #global voidLabels 
+    #global namelabelValid 
     global fullLabelColor 
     
-    #prendere solo ignoreInEval False
-    id2labelValid  = { label.id  : label.color for label in labels if label.ignoreInEval==False}
-    namelabelValid  = { label.name  : label.id for label in labels if label.ignoreInEval==False}
-    voidLabels  = { label.id for label in labels if label.ignoreInEval==True}
+    #possiamo raggruppare gli 0,0,0 e fare meno labels??
+    #id2labelValid  = { label.id  : label.color for label in labels if label.ignoreInEval==False}
+    #namelabelValid  = { label.name  : label.id for label in labels if label.ignoreInEval==False}
+    #voidLabels  = { label.id for label in labels if label.ignoreInEval==True}
     fullLabelColor  =  {label.id : label.color for label in labels }
