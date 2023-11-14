@@ -180,6 +180,9 @@ class ImagesDataset(Dataset):
         #remove parameters --> to self
 
         mask = self.get_label_mask(mask, class_values, label_colors_list)
+
+        #test
+        
         maskDecoded = self.decode_segmap(mask, len(class_values), idXRgb)
 
         print(mask)

@@ -21,7 +21,8 @@ from bin.models.RESNET import R2U_Net
 
 import cv2
 
-from bin.utils import draw_segmentation_map
+from bin.utils import draw_segmentation_map,decode_segmap
+from bin.models.DEEPLAB import GetDeeplabModel
 
 
 screen = tk.Tk()
@@ -38,6 +39,8 @@ fullLabelColor = labels.fullLabelColor
 validLabels = list(fullLabelColor.keys())
 
 RGB_values = list(fullLabelColor.values())
+idXRgb =  dict(zip(range(len(RGB_values)), RGB_values))
+print(idXRgb)
 
 size=256
 
@@ -49,6 +52,10 @@ if __name__ == '__main__':
     
     modelRes = R2U_Net(img_ch=3,output_ch=len(validLabels)).to("cpu")
     modelRes.load_state_dict(torch.load("./checkpoint_model/resnet_online.pth"))
+
+
+    modelDeep = GetDeeplabModel(len(validLabels))
+    modelDeep.load_state_dict(torch.load("./checkpoint_model/deeplab.pth"))
 
     model = None
 
@@ -97,6 +104,8 @@ if __name__ == '__main__':
             model = modelUnet
         elif(choosenModel=="resnet"):
             model = modelRes
+        elif(choosenModel=="deeplabv3"):
+            model = modelDeep
         else:
             model = None
 
@@ -120,7 +129,12 @@ if __name__ == '__main__':
         print(imageTransformed.shape)
         model.eval()
         with torch.no_grad():
-            output = model(imageTransformed.unsqueeze(0)).to("cpu")
+            output = model(imageTransformed.unsqueeze(0))
+            
+            if(choosenModel=="deeplabv3"):
+                output = output['out']
+            
+            output= output.to("cpu")
             print("predicted OUTPUT")
             print(output.shape)
 
@@ -128,6 +142,17 @@ if __name__ == '__main__':
 
             cv2.imshow('Segmented image', mask)
             cv2.waitKey(0)
+            
+            out = output.data.max(1)[1].cpu().numpy()
+ 
+            print(np.unique(out[0]))
+            print(out.shape)
+            mask2 = decode_segmap(out[0],len(idXRgb),idXRgb)
+
+            plt.imshow(mask2)
+            plt.show()
+            plt.clf()
+
 
             cv2.imwrite("./resources/interface/my_out.png",mask)
 
