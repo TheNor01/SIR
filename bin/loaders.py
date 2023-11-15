@@ -176,26 +176,26 @@ class ImagesDataset(Dataset):
         label_colors_list= list(self.fullLabelColor.values())
         
         idXRgb =  dict(zip(range(len(label_colors_list)), label_colors_list))
-        print(idXRgb)
+        #print(idXRgb)
         #remove parameters --> to self
 
         mask = self.get_label_mask(mask, class_values, label_colors_list)
 
         #test
-        
         maskDecoded = self.decode_segmap(mask, len(class_values), idXRgb)
 
-        print(mask)
-        print(np.unique(mask))
+        #print(mask)
+        #print(np.unique(mask))
 
-        print(maskDecoded)
-        print(np.unique(maskDecoded))
+        #print(maskDecoded)
+        #print(np.unique(maskDecoded))
 
         image = np.transpose(image, (2, 0, 1))
         
         image = torch.tensor(image, dtype=torch.float)
         mask = torch.tensor(mask, dtype=torch.long) 
 
+        """
         print(mask/255)
         plt.imshow(mask/255)
         plt.show()
@@ -204,6 +204,7 @@ class ImagesDataset(Dataset):
         plt.imshow(maskDecoded)
         plt.show()
         plt.clf()
+        """
 
         return {'image' : image, 'label':mask}
     

@@ -29,10 +29,9 @@ from bin.utils import draw_segmentation_map,decode_segmap
 
 """
 
-1) normalization
+1) normalization NOPE
 2) adam
-
-3) standard deeplab + ppsnet
+3) lr decay?
 
 """
 
@@ -47,7 +46,7 @@ if __name__ == '__main__':
 
     #use ignore index
     doTrain = 0
-    doVal = 0
+    doVal = 1
     trained=None
 
     labels.init()
@@ -119,15 +118,16 @@ if __name__ == '__main__':
     imgTrain = img['image']
     maskTrain = img['label']
 
-    print(imgTrain.shape)
-    print(maskTrain.shape)
+    #print(imgTrain.shape)
+    #print(maskTrain.shape)
 
-    
+    """
     fig,ax=plt.subplots(ncols=2,nrows=1,figsize=(16,8))
     ax[0].imshow(imgTrain.permute(1, 2, 0))
     ax[1].imshow(maskTrain)
     plt.show()
     plt.clf()
+    """
 
 
     val_data = ImagesDataset(
@@ -138,20 +138,18 @@ if __name__ == '__main__':
         #ignore_index,
         #class_map,
         customSize,
-        RGB_values,
-        class_values
+        fullLabelColor
     )
     
 
-    print(val_data[0]['image'].shape)
-    print(val_data[0]['label'].shape)
+    #print(val_data[0]['image'].shape)
+    #print(val_data[0]['label'].shape)
 
-    exit()
 
     EPOCHS = 20
     BATCH_SIZE = 36
     LR = 0.01
-    WORKERS = 4
+    WORKERS = 0
 
     train_loader = DataLoader(
         train_data,
@@ -182,9 +180,9 @@ if __name__ == '__main__':
     print("TRAINING COMPLETED")
 
     if(doVal):
-        accuracy_score, iou_score = test_classifier(trained,modelString,train_loader,len(class_values),fullLabelColor) #first on train
-        print("TRAINING metrics")
-        print(accuracy_score,iou_score)
+        #accuracy_score, iou_score = test_classifier(trained,modelString,train_loader,len(class_values),fullLabelColor) #first on train
+        #print("TRAINING metrics")
+        #print(accuracy_score,iou_score)
         accuracy_score, iou_score = test_classifier(trained,modelString,val_loader,len(class_values),fullLabelColor)
 
         print("VALIDATION metrics")

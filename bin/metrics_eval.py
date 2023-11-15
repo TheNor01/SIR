@@ -35,8 +35,10 @@ class AverageValueMeter():
             return self.sum/self.num
         except:
             return None
+        
 
 
+"""
 def cross_entropy2d(input, target, weight=None, size_average=True):
     n, c, h, w = input.size()
     nt, ht, wt = target.size()
@@ -51,7 +53,7 @@ def cross_entropy2d(input, target, weight=None, size_average=True):
         input, target, weight=weight, size_average=size_average, ignore_index=250
     )
     return loss
-
+"""
 
 def train_classifier(model, modelString,train_loader, test_loader, exp_name='experiment',lr=0.001, epochs=100, momentum=0.9):
     criterion = nn.CrossEntropyLoss() 
@@ -144,7 +146,7 @@ def train_classifier(model, modelString,train_loader, test_loader, exp_name='exp
     return model
 
 
-#https://github.com/sacmehta/ESPNet/blob/master/train/IOUEval.py to add
+#https://github.com/sacmehta/ESPNet/blob/master/train/IOUEval.py to add alternative to jacc?
 
 #Dice Coefficient https://stats.stackexchange.com/questions/273537/f1-dice-score-vs-iou
 
@@ -157,67 +159,69 @@ def test_classifier(model,modelString, loader,validLabels,label_colous):
     model.to(device)
     #eval mode?
     model.eval()
-    nsamples = 100
+    #nsamples = 100
 
     print("EVALUATING...")
-    for i,batch in tqdm(enumerate(loader)):
+    with torch.no_grad():
+        for i,batch in tqdm(enumerate(loader)):
 
-        if i > nsamples:
-            break
-        #[batch_size, channels, height, width].
-        x = batch["image"].to(device)
-        y = batch["label"].to(device)
+            print("BATCH # "+str(i))
+            #if i > nsamples:
+            #    break
+            #[batch_size, channels, height, width].
+            x = batch["image"].to(device)
+            y = batch["label"].to(device)
 
-        #print(y) #dovrebbe essere int --> da fare in transformation
-        #resolved
+            #print(y) #dovrebbe essere int --> da fare in transformation
+            #resolved
 
-        output = model(x)
-        if(modelString=="deeplab"):
-            output = output['out']
+            output = model(x)
+            if(modelString=="deeplab"):
+                output = output['out']
 
-        #pred = output.data.cpu()
-        #gt = y.data.cpu()
-        
-
-        #https://stackoverflow.com/questions/54083220/why-does-this-semantic-segmentation-network-have-no-softmax-classification-layer
-        #no softmax?
-
-        pred = output.data.max(1)[1].cpu().numpy()
-        gt = y.data.cpu().numpy()
-
-        if i % 100 == 3:
+            #pred = output.data.cpu()
+            #gt = y.data.cpu()
             
-            # Model Prediction
-            decoded_pred = decode_segmap(pred[0],validLabels,label_colous) #doesn't work as expected here.
-            plt.imshow(decoded_pred)
-            plt.show()
-            plt.clf()
 
-            
-            # Ground Truth
-            decode_gt = decode_segmap(gt[0],validLabels,label_colous)
-            plt.imshow(decode_gt)
-            plt.show()
+            #https://stackoverflow.com/questions/54083220/why-does-this-semantic-segmentation-network-have-no-softmax-classification-layer
+            #no softmax?
 
-            exit()
+            pred = output.data.max(1)[1].cpu().numpy()
+            gt = y.data.cpu().numpy()
+
+            """
+            if i % 100 == 3:
+                
+                # Model Prediction
+                decoded_pred = decode_segmap(pred[0],validLabels,label_colous) #doesn't work as expected here.
+                plt.imshow(decoded_pred)
+                plt.show()
+                plt.clf()
+
+                
+                # Ground Truth
+                decode_gt = decode_segmap(gt[0],validLabels,label_colous)
+                plt.imshow(decode_gt)
+                plt.show()
+
+                exit()
+            """
+            sh_metrics = metrics(gt.flatten(), pred.flatten())
+
+            #add more metrics -- ex miou, pixel..
+
+            acc_sh.append(sh_metrics[0])
+            js_sh.append(sh_metrics[1])
 
 
-    
-        sh_metrics = metrics(gt.flatten(), pred.flatten())
-
-        #add more metrics -- ex miou, pixel..
-
-        acc_sh.append(sh_metrics[0])
-        js_sh.append(sh_metrics[1])
+    #acc_s = sum(acc_sh)/(nsamples)
+    #js_s = sum(js_sh)/(nsamples)
+    js_s = sum(js_sh)/len(js_sh)
+    acc_s = sum(acc_sh)/len(acc_sh)
 
 
-    #acc_s = sum(acc_sh)/len(acc_sh)
-    acc_s = sum(acc_sh)/(nsamples)
-    #js_s = sum(js_sh)/len(js_sh)
-    js_s = sum(js_sh)/(nsamples)
-
-    print("Different Metrics were: ", acc_s) 
-    print("Different Metrics were: ", js_s) 
+    print("Different Metrics were ACC : ", acc_s) 
+    print("Different Metrics were JS: ", js_s) 
 
     return acc_s, js_s
 
