@@ -206,9 +206,11 @@ if __name__ == '__main__':
         plt.xlabel("Epochs")
         plt.ylabel("Score")
         plt.legend()
-        plt.show()
 
         plt.savefig('plots/'+str(ts)+"_"+modelString+"_"+train_params_STR)
+
+        plt.show()
+
 
     #Single inference
     """
