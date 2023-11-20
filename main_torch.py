@@ -29,7 +29,7 @@ from bin.utils import draw_segmentation_map,decode_segmap
 
 """
 
-1) normalization NOPE
+1) normalization NOPE --> bad idea
 2) adam
 3) lr decay?
 
@@ -132,7 +132,7 @@ if __name__ == '__main__':
 
     val_data = ImagesDataset(
         path_data, 
-        'val',
+        'val_small',
         #validLabels,
         #voidIdLabels,
         #ignore_index,
@@ -146,10 +146,12 @@ if __name__ == '__main__':
     #print(val_data[0]['label'].shape)
 
 
-    EPOCHS = 20
-    BATCH_SIZE = 36
+    EPOCHS = 3
+    BATCH_SIZE = 30
     LR = 0.01
-    WORKERS = 0
+    WORKERS = 2
+
+    train_params_STR = "%02d_%02d_%02d" % (EPOCHS, BATCH_SIZE, LR)
 
     train_loader = DataLoader(
         train_data,
@@ -172,7 +174,7 @@ if __name__ == '__main__':
 
 
     if(doTrain):
-        trained = train_classifier(model,modelString,train_loader,val_loader, exp_name=str(ts)+"_"+modelString, epochs = EPOCHS,lr=LR,momentum=0.5)
+        trained = train_classifier(model,modelString,train_loader,val_loader, exp_name=str(ts)+"_"+modelString+"_"+train_params_STR, epochs = EPOCHS,lr=LR,momentum=0.5)
         torch.save(model.state_dict(), "./checkpoint_model/"+modelString+".pth")
     else:
         model.load_state_dict(torch.load("./checkpoint_model/"+modelString+".pth"))
@@ -183,10 +185,30 @@ if __name__ == '__main__':
         #accuracy_score, iou_score = test_classifier(trained,modelString,train_loader,len(class_values),fullLabelColor) #first on train
         #print("TRAINING metrics")
         #print(accuracy_score,iou_score)
-        accuracy_score, iou_score = test_classifier(trained,modelString,val_loader,len(class_values),fullLabelColor)
+        accuracy_score, iou_score, f1_score,dsc_score = test_classifier(trained,modelString,val_loader,len(class_values),fullLabelColor,EPOCHS)
+       
 
-        print("VALIDATION metrics")
-        print(accuracy_score,iou_score)
+        print(accuracy_score)
+        print(iou_score)
+        print(f1_score)
+        print(dsc_score)
+
+        print("PLOTTING acs,jaccard,f1 over batch")
+        plt.clf()
+        x = [i for i in range(1, EPOCHS + 1)]
+        plt.plot(x,accuracy_score, label='ACS')
+        plt.plot(x,iou_score, label='IOU')
+        plt.plot(x,f1_score, label='F1')
+        plt.plot(x,dsc_score, label='DICE')
+
+        plt.grid(linestyle = '--', linewidth = 0.5)
+
+        plt.xlabel("Epochs")
+        plt.ylabel("Score")
+        plt.legend()
+        plt.show()
+
+        plt.savefig('plots/'+str(ts)+"_"+modelString+"_"+train_params_STR)
 
     #Single inference
     """
