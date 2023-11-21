@@ -21,6 +21,7 @@ import cv2
 from bin.models.UNET import UNet
 from bin.models.DEEPLAB import GetDeeplabModel
 from bin.models.RESNET import R2U_Net
+#from bin.models.PSPNET import PSPNet
 #import segmentation_models_pytorch as smp
 from bin.metrics_eval import train_classifier,test_classifier
 
@@ -45,7 +46,7 @@ else:
 
 if __name__ == '__main__':
 
-    choosedModel = 2
+    choosedModel = 3
     customSize = 128 #for unet at least 128
 
     current_GMT = time.gmtime()
@@ -53,14 +54,14 @@ if __name__ == '__main__':
     print("Current timestamp:", ts)
 
 
-    if(os.path.exist("./logs")):
+    if(not os.path.exists("./logs")):
        os.makedirs("./logs")
        
-    if(os.path.exist("./plots")):
+    if(not os.path.exists("./plots")):
        os.makedirs("./plots")
 
     #use ignore index
-    doTrain = 0
+    doTrain = 1
     doVal = 1
     trained=None
 
@@ -88,6 +89,11 @@ if __name__ == '__main__':
     elif(choosedModel==2):
         model = UNet(3,classes=len(class_values)).to("cpu")
         modelString= "unet"
+    """
+    elif(choosedModel==3):
+        model = PSPNet(n_classes=len(class_values)).to("cpu")
+        modelString= "unet"
+    """
 
     print(modelString+"-- MODEL HAS BEEN CREATED...\n")
     
