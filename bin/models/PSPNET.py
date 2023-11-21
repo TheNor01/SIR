@@ -1,9 +1,9 @@
-from torch import nn
-import torch.nn.functional as F
 import torch
+from torch import nn
+from torch.nn import functional as F
 
-import torchvision.transforms as transform
-# [(W−K+2P)/S]+1.
+import extractors
+
 
 class PSPModule(nn.Module):
     def __init__(self, features, out_features=1024, sizes=(1, 2, 3, 6)):
