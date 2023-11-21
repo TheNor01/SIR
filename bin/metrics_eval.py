@@ -6,7 +6,6 @@ from torch import nn
 import torch
 import numpy as np
 from statistics import mean
-from torchmetrics.classification import MulticlassJaccardIndex
 from sklearn.metrics import jaccard_score as jsc
 from sklearn.metrics import accuracy_score as acs
 import sklearn.metrics as skm
@@ -126,12 +125,12 @@ def train_classifier(model, modelString,train_loader, test_loader, exp_name='exp
     #DECAY SCHEDULER
     scheduler_lr = StepLR(optimizer, step_size=5, gamma=0.1)
     for e in range(epochs):
-
         print(f"Epoch {e + 1}\n-------------------------------")
         #iteriamo tra due modalità: train e test
 
-        nsamples = 100
+        #nsamples = 100
         for mode in ['train','test']:
+            print(mode)
             loss_meter.reset(); acc_meter.reset()
             model.train() if mode == 'train' else model.eval()
             running_loss = 0.0
@@ -140,43 +139,23 @@ def train_classifier(model, modelString,train_loader, test_loader, exp_name='exp
 
                     x=batch['image'].to(device)
                     y=batch['label'].to(device)
-
-                    if i > nsamples: #to discard
-                        break
-                    
-
-                    #pred = batch['image'].data.max(1)[1].cpu().numpy()
-                    #gt = batch['label'].data.cpu().numpy()
-
                     output = model(x)
 
                     if(modelString=="deeplab"):
                         output = output['out']
-
-
                     #aggiorniamo il global_step
                     #conterrà il numero di campioni visti durante il training
                     n = x.shape[0] #numero di elementi nel batch
                     global_step += n
-
-                    #print(x.shape)
-                    #print(y.shape)
-                    #print(output.shape)
-
-                    #mask = torch.argmax(y, dim=1)
-
                     l = criterion(output,y)
                     #l = cross_entropy2d(output,y)
                     if mode=='train':
                         l.backward()
-
-                    #optimizer.step()
-                    scheduler_lr.step()
+                    optimizer.step()
+                    #scheduler_lr.step()
                     optimizer.zero_grad()
-
                     #acc = accuracy_score(y.data.to('cpu'),output.data.to('cpu').max(1)[1])
                     loss_meter.add(l.item(),n)
-
                     running_loss += l.item()
                     if i % 100 == 0:
                             print('[%d, %5d] loss: %.3f' %
@@ -190,9 +169,10 @@ def train_classifier(model, modelString,train_loader, test_loader, exp_name='exp
                         writer.add_scalar('loss/train', loss_meter.value(), global_step=global_step)
                         #writer.add_scalar('accuracy/train', acc_meter.value(), global_step=global_step)
 
-
+                scheduler_lr.step()
 
             #una volta finita l'epoca (sia nel caso di training che test, loggiamo le stime finali)
+            print(loss_meter.value())
             writer.add_scalar('loss/' + mode, loss_meter.value(), global_step=global_step)
             #writer.add_scalar('accuracy/' + mode, acc_meter.value(), global_step=global_step)
         
@@ -282,18 +262,18 @@ def test_classifier(model,modelString, loader,validLabels,label_colous,epochs):
                 local_f1_score.append(cm_metrics[0])
                 local_dsc_score.append(cm_metrics[1])
         
-
             f1_score_s = sum(local_f1_score)/len(local_f1_score)
             dsc_score_s = sum(local_dsc_score)/len(local_dsc_score)
             js_s = sum(local_js_sh)/len(local_js_sh)
             acc_s = sum(local_acc_sh)/len(local_acc_sh)
-            
+
+            running_metrics_val.reset() #RESET CM
+
             acc_sh.append(acc_s)
             js_sh.append(js_s)
             f1_score.append(f1_score_s)
             dsc_score.append(dsc_score_s)
 
-            running_metrics_val.reset() #RESET CM
             #end EPOCH
 
 

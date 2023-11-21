@@ -1,9 +1,9 @@
+import torch
+
 import numpy as np 
 import pandas as pd 
 
-import os
 
-import torch
 from glob import glob
 import torch.nn as nn
 from tqdm import tqdm
@@ -27,6 +27,13 @@ from bin.utils import draw_segmentation_map,decode_segmap
 
 #to do:
 
+device = ""
+if torch.backends.mps.is_available():
+    device = torch.device("mps")
+    x = torch.ones(1, device=device)
+    print (x)
+else:
+    device = "cpu"
 """
 
 1) normalization NOPE --> bad idea
@@ -37,8 +44,8 @@ from bin.utils import draw_segmentation_map,decode_segmap
 
 if __name__ == '__main__':
 
-    choosedModel = 0
-    customSize = 256 #for unet at least 128
+    choosedModel = 2
+    customSize = 128 #for unet at least 128
 
     current_GMT = time.gmtime()
     ts = calendar.timegm(current_GMT)
@@ -132,7 +139,7 @@ if __name__ == '__main__':
 
     val_data = ImagesDataset(
         path_data, 
-        'val_small',
+        'val',
         #validLabels,
         #voidIdLabels,
         #ignore_index,
@@ -147,21 +154,22 @@ if __name__ == '__main__':
 
 
     EPOCHS = 3
-    BATCH_SIZE = 30
+    BATCH_SIZE = 64
     LR = 0.01
-    WORKERS = 2
+    WORKERS = 0
 
     train_params_STR = "%02d_%02d_%02d" % (EPOCHS, BATCH_SIZE, LR)
 
     train_loader = DataLoader(
         train_data,
         batch_size = BATCH_SIZE,
-        #shuffle=True,
+        shuffle=True,
         num_workers = WORKERS,
     )
 
     val_loader = DataLoader(
         val_data,
+        shuffle=True,
         batch_size = BATCH_SIZE,
         num_workers = WORKERS,
     )
@@ -170,8 +178,6 @@ if __name__ == '__main__':
     #============================
 
     #https://www.kaggle.com/code/sudhupandey/cityscape-segmentation-unet-pytorch
-
-
 
     if(doTrain):
         trained = train_classifier(model,modelString,train_loader,val_loader, exp_name=str(ts)+"_"+modelString+"_"+train_params_STR, epochs = EPOCHS,lr=LR,momentum=0.5)

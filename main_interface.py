@@ -6,14 +6,9 @@ from torchvision import transforms
 import pandas as pd
 import numpy as np
 from torch import nn
-import pickle
 #Preprocessing
-import os
-import librosa
-import librosa.display
 import tkinter as tk
 from tkinter import filedialog
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from PIL import ImageTk, Image
 from config import labels
 from bin.models.UNET import UNet

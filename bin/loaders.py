@@ -9,7 +9,6 @@ import torch
 from PIL import Image
 import os
 
-import imageio
 import cv2
 
 from config import labels
