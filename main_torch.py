@@ -62,6 +62,8 @@ if __name__ == '__main__':
     class_values= list(fullLabelColor.keys())
     RGB_values = list(fullLabelColor.values())
     
+    print("LABELS:= "+str(len(fullLabelColor)))
+    
 
     #class_values= labels.ALL_CLASSES
     #RGB_values = labels.LABEL_COLORS_LIST
