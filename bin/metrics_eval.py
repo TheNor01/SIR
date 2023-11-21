@@ -13,7 +13,7 @@ import torch.nn.functional as F
 from matplotlib import pyplot as plt
 from torch.optim.lr_scheduler import StepLR
 from bin.utils import decode_segmap
-
+import time
 from tqdm import tqdm
 
 class AverageValueMeter():
@@ -103,6 +103,10 @@ def cross_entropy2d(input, target, weight=None, size_average=True):
 
 
 def train_classifier(model, modelString,train_loader, test_loader, exp_name='experiment',lr=0.001, epochs=100, momentum=0.9):
+    
+    start = time.time()
+    
+    
     criterion = nn.CrossEntropyLoss() 
     optimizer = SGD(model.parameters(), lr, momentum=momentum) 
     #meters
@@ -176,6 +180,8 @@ def train_classifier(model, modelString,train_loader, test_loader, exp_name='exp
             writer.add_scalar('loss/' + mode, loss_meter.value(), global_step=global_step)
             #writer.add_scalar('accuracy/' + mode, acc_meter.value(), global_step=global_step)
         
+    end = time.time()
+    print("ELAPSED TIME: s:"+str(end - start))
     return model
 
 
@@ -261,6 +267,8 @@ def test_classifier(model,modelString, loader,validLabels,label_colous,epochs):
                 cm_metrics = running_metrics_val.get_metrics()
                 local_f1_score.append(cm_metrics[0])
                 local_dsc_score.append(cm_metrics[1])
+                
+                print(sh_metrics[0])
         
             f1_score_s = sum(local_f1_score)/len(local_f1_score)
             dsc_score_s = sum(local_dsc_score)/len(local_dsc_score)

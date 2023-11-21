@@ -13,6 +13,7 @@ import torchvision.transforms as transform
 from torch.utils.data import DataLoader
 from bin.loaders import ImagesDataset
 import time
+import os
 from torch.utils.tensorboard import SummaryWriter
 from config import labels
 import calendar
@@ -50,6 +51,13 @@ if __name__ == '__main__':
     current_GMT = time.gmtime()
     ts = calendar.timegm(current_GMT)
     print("Current timestamp:", ts)
+
+
+    if(os.path.exist("./logs")):
+       os.makedirs("./logs")
+       
+    if(os.path.exist("./plots")):
+       os.makedirs("./plots")
 
     #use ignore index
     doTrain = 0
