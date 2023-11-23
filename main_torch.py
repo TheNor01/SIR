@@ -46,8 +46,8 @@ else:
 
 if __name__ == '__main__':
 
-    choosedModel = 3
-    customSize = 128 #for unet at least 128
+    choosedModel = 1
+    customSize = 256 #for unet at least 128
 
     current_GMT = time.gmtime()
     ts = calendar.timegm(current_GMT)
@@ -84,7 +84,7 @@ if __name__ == '__main__':
         model = R2U_Net(img_ch=3,output_ch=len(class_values)).to("cpu")
         modelString= "resnet_online"
     elif(choosedModel==1):
-        model = GetDeeplabModel(len(class_values)) #to fix
+        model = GetDeeplabModel(len(class_values))
         modelString= "deeplab"
     elif(choosedModel==2):
         model = UNet(3,classes=len(class_values)).to("cpu")
@@ -128,10 +128,6 @@ if __name__ == '__main__':
     train_data = ImagesDataset(
         path_data, 
         'train',
-        #validLabels,
-        #voidIdLabels,
-        #ignore_index,
-        #class_map,
         customSize,
         fullLabelColor
     )
@@ -156,10 +152,6 @@ if __name__ == '__main__':
     val_data = ImagesDataset(
         path_data, 
         'val',
-        #validLabels,
-        #voidIdLabels,
-        #ignore_index,
-        #class_map,
         customSize,
         fullLabelColor
     )
@@ -169,12 +161,12 @@ if __name__ == '__main__':
     #print(val_data[0]['label'].shape)
 
 
-    EPOCHS = 3
-    BATCH_SIZE = 64
+    EPOCHS = 10
+    BATCH_SIZE = 32
     LR = 0.01
     WORKERS = 0
 
-    train_params_STR = "%02d_%02d_%02d" % (EPOCHS, BATCH_SIZE, LR)
+    train_params_STR = "%02d_%02d_%02d_%02d" % (customSize,EPOCHS, BATCH_SIZE, LR)
 
     train_loader = DataLoader(
         train_data,
@@ -190,10 +182,7 @@ if __name__ == '__main__':
         num_workers = WORKERS,
     )
 
-
     #============================
-
-    #https://www.kaggle.com/code/sudhupandey/cityscape-segmentation-unet-pytorch
 
     if(doTrain):
         trained = train_classifier(model,modelString,train_loader,val_loader, exp_name=str(ts)+"_"+modelString+"_"+train_params_STR, epochs = EPOCHS,lr=LR,momentum=0.5)
