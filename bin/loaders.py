@@ -159,9 +159,6 @@ class ImagesDataset(Dataset):
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB).astype('float32')
         image = image / 255.0
 
-        #img = image[...,::-1] #plt use RGB
-        #plt.imshow(img)
-        #plt.show()
 
         mask = cv2.imread(lbl_path, cv2.IMREAD_COLOR)
 
@@ -169,6 +166,12 @@ class ImagesDataset(Dataset):
         mask = cv2.resize(mask, (self.size, self.size))
         mask = cv2.cvtColor(mask, cv2.COLOR_BGR2RGB).astype('float32')
 
+        """
+        print(mask)
+        plt.imshow(mask)
+        plt.show()
+        plt.clf()
+        """
         
         # Get colored label mask.
         class_values= list(self.fullLabelColor.keys())
@@ -183,27 +186,22 @@ class ImagesDataset(Dataset):
         #test
         maskDecoded = self.decode_segmap(mask, len(class_values), idXRgb)
 
-        #print(mask)
-        #print(np.unique(mask))
+        print(mask)
+        print(np.unique(mask))
 
         #print(maskDecoded)
         #print(np.unique(maskDecoded))
 
-        image = np.transpose(image, (2, 0, 1))
+        #image = np.transpose(image, (2, 0, 1))
         
         image = torch.tensor(image, dtype=torch.float)
         mask = torch.tensor(mask, dtype=torch.long) 
 
-        """
-        print(mask/255)
-        plt.imshow(mask/255)
-        plt.show()
-        plt.clf()
 
-        plt.imshow(maskDecoded)
-        plt.show()
-        plt.clf()
-        """
+        #plt.imshow(maskDecoded)
+        #plt.show()
+        #plt.clf()
+        
 
         return {'image' : image, 'label':mask}
     
