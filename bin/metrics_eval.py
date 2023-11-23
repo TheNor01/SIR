@@ -127,13 +127,13 @@ def train_classifier(model, modelString,train_loader, test_loader, exp_name='exp
 
 
     #DECAY SCHEDULER
-    scheduler_lr = StepLR(optimizer, step_size=5, gamma=0.1)
+    scheduler_lr = StepLR(optimizer, step_size=2, gamma=0.1)
     for e in range(epochs):
         print(f"Epoch {e + 1}\n-------------------------------")
         #iteriamo tra due modalità: train e test
 
         #nsamples = 100
-        for mode in ['train','test']:
+        for mode in ['train']:
             print(mode)
             loss_meter.reset(); acc_meter.reset()
             model.train() if mode == 'train' else model.eval()
